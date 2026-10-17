@@ -280,9 +280,10 @@ void checkAndStartPumpOnService() {
     return;
   }
 
-  // Pre-condición estricta: Si la bomba está OFFLINE (apagada por smart plug), abortar
-  if (!isPumpOnline) {
-    Serial.println("[SERVICIO] Bomba OFFLINE. Abortando solicitud de servicio sin mover MV01.");
+  // Pre-condición: Si la bomba está OFFLINE, verificar si se permite apertura manual de MV01
+  bool allowManualMv01 = tankSettingsService.readManualMv01();
+  if (!isPumpOnline && !allowManualMv01) {
+    Serial.println("[SERVICIO] Bomba OFFLINE y modo manual no permitido. Abortando solicitud de servicio sin mover MV01.");
     tankStateService.update([&](TankState& state) {
       state.cmdsrv = false;
       state.vsCmnd = false; // CERRAR MV01
@@ -303,6 +304,11 @@ void checkAndStartPumpOnService() {
     case SP_WAIT_VALVE_OPEN:
       // Esperar que MV01 esté 100% abierta por fin de carrera
       if (vslsState == VS_OPEN) {
+        if (!isPumpOnline) {
+          Serial.println("[SERVICIO] MV01 100% abierta en modo manual. Permanece ABIERTA para pruebas/gravedad (bomba offline).");
+          servicePumpStep = SP_RUNNING;
+          break;
+        }
         Serial.println("[SERVICIO] MV01 100% abierta. Esperando 2 seg de reposo para inundar succión...");
         serviceTimer = 20; // 2.0 s (20 ticks de 100ms)
         servicePumpStep = SP_STABILIZING;

@@ -48,6 +48,7 @@ class TankSettings {
   uint8_t  vs_topen25;     // Tiempo de apertura de valvula motorizada al 25% (Tomado desde la posicion cerrada)
   bool    hls_Inverted;    // Bandera de contacto de switch de nivel alto invertido ( Para adaptar posicion del Flotador )
   String  pump_host;       // Direccion IP del Controlador de Bomba Asociado.
+  bool    manual_mv01;     // Permitir que se pueda abrir válvula MV01 de forma manual
     
   static void read(TankSettings& settings, JsonObject& root) {
     root["level_min"] = settings.level_min;
@@ -58,6 +59,7 @@ class TankSettings {
     root["vs_topen25"] = settings.vs_topen25;  // Para recircular con poca contribucion del tanque.
     root["hls_invert"] = settings.hls_Inverted;
     root["pump_host"]  = settings.pump_host;
+    root["manual_mv01"] = settings.manual_mv01;
   }
 
   static StateUpdateResult update(JsonObject& root, TankSettings& settings) {
@@ -69,6 +71,7 @@ class TankSettings {
     settings.vs_topen25 = root["vs_topen25"] | FACTORY_VMOT_OPEN_TIME25;
     settings.hls_Inverted = root["hls_invert"] | DEFAULT_STATE;
     settings.pump_host = root["pump_host"] | FACTORY_PUMP_HOST;
+    settings.manual_mv01 = root["manual_mv01"] | false;
     return StateUpdateResult::CHANGED;
   }
   
@@ -86,6 +89,7 @@ class TankSettingsService : public StatefulService<TankSettings> {
    uint8_t readVSOpenTime25();
    bool    readHLS_InvFlag();
    String  readPumpHost();
+   bool    readManualMv01();
    
 
  private:

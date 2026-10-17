@@ -45,4 +45,9 @@ bool TankSettingsService::readHLS_InvFlag(){
 
 String TankSettingsService::readPumpHost(){
   return TankSettingsService::_state.pump_host.length() > 0 ? TankSettingsService::_state.pump_host : FACTORY_PUMP_HOST;
-}
+}
+
+
+bool TankSettingsService::readManualMv01(){
+  return TankSettingsService::_state.manual_mv01;
+}

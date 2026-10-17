@@ -156,8 +156,43 @@ const TankStateWebSocketForm: FC = () => {
   const isSuministroActivo = data.sov1_on;
   const isSuccionBombaActiva = (data.vs_state === 1 || data.vs_state === 4) && isBombaRunning;
   const isBombaEnMarcha = isBombaRunning;
-  const isServicioCasaActivo = data.cmd_serv && (data.vs_state === 1);
   const isRiegoActivo = data.sov2_on || data.cmd_rieg;
+
+  // Estado del suministro a casa en Cabezal de Distribución según la válvula de servicio (MV01):
+  const getServicioCasaStatus = () => {
+    switch (data.vs_state) {
+      case 1: // VS_OPEN (100% Abierta)
+        return {
+          flowActive: true,
+          label: isBombaEnMarcha ? "SUMINISTRANDO" : "ABIERTO",
+          color: "#39ff14",
+          bg: "rgba(57, 255, 20, 0.15)"
+        };
+      case 0: // VS_MOVING (En movimiento / Maniobra)
+        return {
+          flowActive: false,
+          label: "MANIOBRANDO",
+          color: "#f59e0b",
+          bg: "rgba(245, 158, 11, 0.15)"
+        };
+      case 4: // VS_RECIRC (Recirculación parcial)
+        return {
+          flowActive: true,
+          label: "RECIRCULANDO",
+          color: "#00e5ff",
+          bg: "rgba(0, 229, 255, 0.15)"
+        };
+      case 2: // VS_CLOSED (Cerrada)
+      default:
+        return {
+          flowActive: false,
+          label: "CERRADO",
+          color: "#64748b",
+          bg: "rgba(255, 255, 255, 0.05)"
+        };
+    }
+  };
+  const servicioCasa = getServicioCasaStatus();
 
   return (
     <SectionContent title="" titleGutter>
@@ -344,7 +379,7 @@ const TankStateWebSocketForm: FC = () => {
                   thickness={14} 
                 />
                 <PumpIndicator 
-                  label="BOMBA TK" 
+                  label="BOMBA LLENADO" 
                   state={isBombaEnMarcha ? 'running' : 'stopped'} 
                 />
               </Box>
@@ -352,8 +387,8 @@ const TankStateWebSocketForm: FC = () => {
                 <Typography variant="caption" sx={{ color: currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold' }}>
                   MV01: {currentVsState.desc.toUpperCase()} ({data.time_vsoper}s)
                 </Typography>
-                <Typography variant="caption" sx={{ color: isBombaEnMarcha ? '#39ff14' : (data.cmd_serv ? (isBombaOnline ? '#fbbf24' : '#ff3131') : '#64748b'), fontFamily: 'monospace', fontWeight: 'bold' }}>
-                  BOMBA: {isBombaEnMarcha ? 'MARCHA' : (data.cmd_serv ? (isBombaOnline ? 'ALINEANDO...' : 'OFFLINE') : 'PARADA')}
+                <Typography variant="caption" sx={{ color: isBombaEnMarcha ? '#39ff14' : (isBombaOnline ? '#94a3b8' : '#ff3131'), fontFamily: 'monospace', fontWeight: 'bold' }}>
+                  BOMBA: {isBombaEnMarcha ? 'MARCHA' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')}
                 </Typography>
               </Box>
             </Box>
@@ -370,18 +405,18 @@ const TankStateWebSocketForm: FC = () => {
                   A CASA:
                 </Typography>
                 <PipeFlow 
-                  flowActive={isServicioCasaActivo} 
+                  flowActive={servicioCasa.flowActive} 
                   fluidColor="#00e5ff" 
                   direction="right" 
                   length={60} 
                   thickness={12} 
                 />
                 <Chip 
-                  label={isServicioCasaActivo ? "SUMINISTRANDO" : "CERRADO"} 
+                  label={servicioCasa.label} 
                   size="small"
                   sx={{ 
-                    bgcolor: isServicioCasaActivo ? 'rgba(57,255,20,0.1)' : 'rgba(255,255,255,0.05)', 
-                    color: isServicioCasaActivo ? '#39ff14' : '#64748b',
+                    bgcolor: servicioCasa.bg, 
+                    color: servicioCasa.color, 
                     fontSize: '9px',
                     fontWeight: 700,
                     fontFamily: 'monospace'

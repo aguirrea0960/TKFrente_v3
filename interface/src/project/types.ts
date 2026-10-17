@@ -32,5 +32,6 @@ export interface TankSettings {
   vs_topen50: number;
   vs_topen25: number;
   hls_invert: boolean;
+  manual_mv01?: boolean;
   pump_host?: string;
 }

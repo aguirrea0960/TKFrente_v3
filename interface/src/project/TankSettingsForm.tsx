@@ -197,6 +197,16 @@ const TankSettingsForm: FC = () => {
                     }
                     label="Invertir Lógica de Boya Alto Nivel (HLS)"
                   />
+                  <BlockFormControlLabel
+                    control={
+                      <Checkbox
+                        name="manual_mv01"
+                        checked={data.manual_mv01 || false}
+                        onChange={updateFormValue}
+                      />
+                    }
+                    label="Permitir que se pueda abrir válvula MV01 de forma manual"
+                  />
                 </Box>
               </Box>
             </Box>
