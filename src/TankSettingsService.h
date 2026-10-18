@@ -33,7 +33,7 @@
 #endif
 
 #ifndef FACTORY_PUMP_HOST
-#define FACTORY_PUMP_HOST "192.168.10.191"
+#define FACTORY_PUMP_HOST "192.168.10.193"
 #endif
 
 #define DEFAULT_STATE false

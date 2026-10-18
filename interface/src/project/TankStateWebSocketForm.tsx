@@ -148,9 +148,9 @@ const TankStateWebSocketForm: FC = () => {
   const isBombaFail = data.pump_fail ?? false;
 
   // Permisivos lógicos:
-  const canFill = data.hl_on && isBombaOnline;
+  const canFill = true; // Control manual libre
   const canServe = !data.cmd_rec25 && !data.cmd_rec50;
-  const canRecirc = isBombaOnline && !data.cmd_serv && data.hl_on;
+  const canRecirc = true; // Control manual libre
 
   // Estados de flujo hidráulico exacto en LAZO CERRADO:
   const isSuministroActivo = data.sov1_on;

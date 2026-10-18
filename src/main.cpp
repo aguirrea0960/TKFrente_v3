@@ -247,13 +247,25 @@ void pollPumpStatus() {
   int code = http.GET();
 
   if (code == 200) {
-    DynamicJsonDocument doc(512);
+    DynamicJsonDocument doc(1024);
     DeserializationError err = deserializeJson(doc, http.getString());
     if (!err) {
-      int pmpState = doc["state"] | -1;
-      isPumpOnline = true;
-      isPumpRunning = (pmpState == 1); // PS_ON_NO_WF = 1
-      isPumpFail = (pmpState == 2);    // PS_OFF_WF = 2
+      // 1. Estado de la bomba:
+      if (doc.containsKey("pump_running") || doc.containsKey("pump_on")) {
+        isPumpOnline  = true;
+        isPumpRunning = (doc["pump_running"] | false) || (doc["pump_on"] | false);
+        isPumpFail    = doc["pump_fail"] | false;
+      } else if (doc.containsKey("state")) {
+        int pmpState = doc["state"] | -1;
+        isPumpOnline  = true;
+        // Estado 1 = PS_ON_NO_WF (Marcha normal), Estado 3 = PS_ON_WF (Marcha forzada en prueba/recirculación):
+        isPumpRunning = (pmpState == 1 || pmpState == 3);
+        isPumpFail    = (pmpState == 2 || pmpState == 3);
+      } else if (doc.containsKey("pump_online")) {
+        isPumpOnline  = doc["pump_online"] | false;
+        isPumpRunning = doc["pump_running"] | false;
+        isPumpFail    = doc["pump_fail"] | false;
+      }
     } else {
       isPumpOnline = false;
       isPumpRunning = false;
@@ -463,7 +475,7 @@ void IOMonitor(boolean forceUpdate) {
       }
   }
   // ----------------------------------------------------------------------------------------
-  checkAndStartPumpOnService();
+  // checkAndStartPumpOnService(); // Deshabilitado para control operativo directo
   // ----------------------------------------------------------------------------------------
   
   // Watchdog de seguridad de llenado continuo (40 min máx para proteger contra vaciados/fugas):

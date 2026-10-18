@@ -318,20 +318,12 @@ class TankState {
            _state.tkstate = TS_IDLE; // Tanque Disponible (en espera)
         
         // Enclavamiento duro: Solo permitir llenar si la bomba está ONLINE en la red
-        _state.fillena = _state.pump_online; 
+        _state.fillena = true; 
         _state.servena = true;    // Si podemos servir agua si la bomba está disponible.
       break;
     }  
   
-    // Si la bomba no está online, abortar cualquier comando o intento de llenado
-    if (!_state.pump_online) {
-      _state.fillena = false;
-      if (_state.cmdfill || _state.sov1On) {
-        _state.cmdfill = false;
-        _state.sov1On  = false;
-        if (_state.tkstate == TS_FILL) _state.tkstate = TS_IDLE;
-      }
-    }
+    // Llenado libre bajo comando manual de usuario
 
     // Estado de procesamiento del tanque:
     switch(_state.tkstate){
@@ -349,7 +341,7 @@ class TankState {
       // Tanque llenandose:
       case TS_FILL:
         // Si ya esta lleno (Contacto cerrado), o bomba offline, o se cancelo comando:
-        if(!_state.swhlvlOn || !_state.cmdfill || !_state.pump_online){
+        if(!_state.swhlvlOn || !_state.cmdfill){
           _state.sov1On  = false;
           _state.cmdfill = false;
           // Si no estamos sirviendo de forma simultánea, colocar tanque en modo de espera.
