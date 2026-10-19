@@ -22,6 +22,9 @@
 #include <NTPStatus.h>
 #include <OTASettingsService.h>
 #include <UploadFirmwareService.h>
+#if FT_ENABLED(FT_UPLOAD_FILESYSTEM)
+#include <UploadFSService.h>
+#endif
 #include <RestartService.h>
 #include <SecuritySettingsService.h>
 #include <SystemStatus.h>
@@ -110,6 +113,9 @@ class ESP8266React {
 #endif
 #if FT_ENABLED(FT_UPLOAD_FIRMWARE)
   UploadFirmwareService _uploadFirmwareService;
+  #if FT_ENABLED(FT_UPLOAD_FILESYSTEM)
+  UploadFSService _uploadFSService;
+#endif
 #endif
 #if FT_ENABLED(FT_MQTT)
   MqttSettingsService _mqttSettingsService;

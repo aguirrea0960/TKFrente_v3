@@ -1,4 +1,4 @@
-import React, { FC, useState } from "react";
+import React, { FC, useState, useContext } from "react";
 import { ValidateFieldsError } from "async-validator";
 import { Box, Button, TextField, Paper, Typography } from "@mui/material";
 import { Save, Radio } from "lucide-react";
@@ -6,6 +6,7 @@ import { Save, Radio } from "lucide-react";
 import { ButtonRow, FormLoader, SectionContent, ValidatedTextField } from "../components";
 import { validate } from "../validators";
 import { useRest, updateValue } from "../utils";
+import { LayoutContext } from "../components/layout/context";
 
 import * as DemoApi from './api';
 import { TankMqttSettings } from "./types";
@@ -13,9 +14,13 @@ import { TANK_MQTT_SETTINGS_VALIDATOR } from "./validators";
 
 const TankMqttSettingsForm: FC = () => {
   const [fieldErrors, setFieldErrors] = useState<ValidateFieldsError>();
+  const { setTitle } = useContext(LayoutContext);
   const {
     loadData, saveData, saving, setData, data, errorMessage
-  } = useRest<TankMqttSettings>({ read: DemoApi.readBrokerSettings, update: DemoApi.updateBrokerSettings });
+  } = useRest<TankMqttSettings>({ 
+    read: DemoApi.readBrokerSettings, 
+    update: DemoApi.updateBrokerSettings 
+  });
 
   const updateFormValue = updateValue(setData);
 
@@ -32,7 +37,11 @@ const TankMqttSettingsForm: FC = () => {
     try {
       setFieldErrors(undefined);
       await validate(TANK_MQTT_SETTINGS_VALIDATOR, data);
-      saveData();
+      await saveData();
+      if (data.name) {
+        localStorage.setItem("tank_device_name", data.name);
+        setTitle(data.name);
+      }
     } catch (errors: any) {
       setFieldErrors(errors);
     }
@@ -46,9 +55,8 @@ const TankMqttSettingsForm: FC = () => {
           sx={{
             p: 3,
             borderRadius: 3,
-            background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            color: '#f8fafc'
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.paper' : '#ffffff',
+            border: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
@@ -57,8 +65,8 @@ const TankMqttSettingsForm: FC = () => {
               CONFIGURACIÓN MQTT & TELEMETRÍA
             </Typography>
           </Box>
-          <Typography variant="body2" sx={{ color: '#94a3b8', mb: 3 }}>
-            Rutas de publicación y subscripción para integración con Home Assistant, Node-RED o Broker central.
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+            Rutas de publicación y suscripción para integración con Home Assistant, Node-RED o Broker central.
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -70,6 +78,7 @@ const TankMqttSettingsForm: FC = () => {
               variant="outlined"
               value={data.name || ''}
               onChange={updateFormValue}
+              helperText="Nombre mostrado en la barra superior y en el monitor del tanque"
             />
 
             <TextField
@@ -89,17 +98,7 @@ const TankMqttSettingsForm: FC = () => {
               variant="outlined"
               value={data.mqtt_path || ''}
               onChange={updateFormValue}
-              helperText="Ejemplo: home/water/tank_frente"
-            />
-
-            <TextField
-              name="pump_path"
-              label="Ruta de Topic MQTT de la Bomba Asociada"
-              fullWidth
-              variant="outlined"
-              value={data.pump_path || ''}
-              onChange={updateFormValue}
-              helperText="Ejemplo: home/water/pump"
+              helperText="Ejemplo: water/tank/tk-6e7c"
             />
           </Box>
 

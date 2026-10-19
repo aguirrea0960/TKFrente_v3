@@ -17,3 +17,7 @@ export { default as PipeFlow } from './Indicators/PipeFlow';
 export { default as PidControllerFaceplate } from './Indicators/PidControllerFaceplate';
 export { default as IndustrialButton } from './switches/IndustrialButton';
 export { default as IndustrialSwitch } from './switches/IndustrialSwitch';
+
+export { default as TankMonitor } from './TankMonitor';
+export * from './TankMonitor';
+

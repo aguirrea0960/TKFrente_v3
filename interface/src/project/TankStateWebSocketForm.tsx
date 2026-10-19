@@ -32,6 +32,7 @@ import * as WiFiApi from '../api/wifi';
 import { FormLoader, SectionContent } from '../components';
 import { useWs } from '../utils';
 import { TankState } from './types';
+import { useThemeMode } from '../CustomTheme';
 
 // Componentes Industriales HMI
 import TankLevelIndicator from '../components/Indicators/TankLevelIndicator';
@@ -65,6 +66,8 @@ const ESTADOS_VALVULA_SERVICIO = [
 ];
 
 const TankStateWebSocketForm: FC = () => {
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
   const { connected, updateData, data } = useWs<TankState>(TANK_SETTINGS_WEBSOCKET_URL);
 
   const [deviceIp, setDeviceIp] = React.useState<string>(() => {
@@ -122,20 +125,21 @@ const TankStateWebSocketForm: FC = () => {
 
   if (!connected || !data) {
     return (
-      <SectionContent title="Tablero de Control SCADA" titleGutter>
+      <Box sx={{ width: '100%', p: 2 }}>
         <Paper 
           sx={{ 
             p: 4, 
             textAlign: 'center', 
             borderRadius: 3, 
-            background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-            color: '#fff',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            background: isDark ? 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+            color: isDark ? '#fff' : '#0f172a',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
           }}
         >
           <FormLoader message="Conectando con Tanque de Frente via WebSocket (/ws/devState)..." />
         </Paper>
-      </SectionContent>
+      </Box>
     );
   }
 
@@ -195,7 +199,7 @@ const TankStateWebSocketForm: FC = () => {
   const servicioCasa = getServicioCasaStatus();
 
   return (
-    <SectionContent title="" titleGutter>
+    <Box sx={{ width: "100%" }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%', maxWidth: 1200, margin: '0 auto' }}>
         
         {/* HEADER SCADA: TELEMETRÍA EN VIVO */}
@@ -204,8 +208,11 @@ const TankStateWebSocketForm: FC = () => {
           sx={{
             p: 2,
             borderRadius: 3,
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: isDark
+              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+            boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.04)',
             display: 'flex',
             flexWrap: 'wrap',
             justifyContent: 'space-between',
@@ -227,21 +234,21 @@ const TankStateWebSocketForm: FC = () => {
               <Radio size={22} />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#f8fafc', letterSpacing: 0.5, fontSize: '1.1rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: isDark ? '#f8fafc' : '#0f172a', letterSpacing: 0.5, fontSize: '1.1rem' }}>
                 TANQUE DE FRENTE · SCADA
               </Typography>
-              <Typography variant="caption" sx={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 Nodo ESP32 {deviceIp ? `· IP: ${deviceIp}` : (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `· IP: ${window.location.hostname}` : '')}
               </Typography>
             </Box>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.3)', p: '6px 14px', borderRadius: 2, border: `1px solid ${currentSysState.color}` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)', p: '6px 14px', borderRadius: 2, border: `1px solid ${currentSysState.color}` }}>
               <Box sx={{ color: currentSysState.color, display: 'flex' }}>
                 {currentSysState.icon}
               </Box>
-              <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'monospace' }}>
+              <Typography sx={{ color: isDark ? '#fff' : '#0f172a', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'monospace' }}>
                 {currentSysState.desc.toUpperCase()}
               </Typography>
             </Box>
@@ -285,19 +292,23 @@ const TankStateWebSocketForm: FC = () => {
           sx={{
             p: 3,
             borderRadius: 3,
-            background: 'linear-gradient(180deg, #131d2e 0%, #0d1522 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: 'inset 0 1px 3px rgba(255,255,255,0.05), 0 10px 25px rgba(0,0,0,0.5)',
+            background: isDark
+              ? 'linear-gradient(180deg, #131d2e 0%, #0d1522 100%)'
+              : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+            border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: isDark
+              ? 'inset 0 1px 3px rgba(255,255,255,0.05), 0 10px 25px rgba(0,0,0,0.5)'
+              : '0 4px 16px rgba(0,0,0,0.05)',
             display: 'flex',
             flexDirection: 'column',
             gap: 2.5
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', pb: 1 }}>
             <Typography variant="subtitle2" sx={{ color: '#38bdf8', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 1 }}>
               <Gauge size={16} /> Esquema Hidráulico del Proceso (P&ID)
             </Typography>
-            <Typography variant="caption" sx={{ color: '#64748b', fontFamily: 'monospace' }}>
+            <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'monospace' }}>
               SUMINISTRO → TANQUE → MV01 → SUCCIÓN BOMBA → CABEZAL DE SALIDA (CASA / RIEGO)
             </Typography>
           </Box>
@@ -305,7 +316,7 @@ const TankStateWebSocketForm: FC = () => {
           <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around', alignItems: 'center', gap: 2 }}>
             
             {/* 1. LÍNEA DE SUMINISTRO AL TANQUE (Válvula SOV1 de Llenado) */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.02)', p: 1.5, borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
               <Typography variant="caption" sx={{ color: '#38bdf8', fontWeight: 800, textAlign: 'center' }}>
                 SUMINISTRO DE AGUA
               </Typography>
@@ -354,7 +365,7 @@ const TankStateWebSocketForm: FC = () => {
             </Box>
 
             {/* 3. SUCCIÓN DE BOMBA A TRAVÉS DE MV01 */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.02)', p: 1.5, borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
               <Typography variant="caption" sx={{ color: '#00e5ff', fontWeight: 800, textAlign: 'center' }}>
                 SUCCIÓN BOMBA (VÍA MV01)
               </Typography>
@@ -394,7 +405,7 @@ const TankStateWebSocketForm: FC = () => {
             </Box>
 
             {/* 4. CABEZAL DE SALIDA DE BOMBA: CASA Y SOV2 RIEGO */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.02)', p: 1.5, borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
               <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 800, textAlign: 'center' }}>
                 CABEZAL DE DISTRIBUCIÓN
               </Typography>
@@ -458,14 +469,16 @@ const TankStateWebSocketForm: FC = () => {
           sx={{
             p: 3,
             borderRadius: 3,
-            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
+            background: isDark
+              ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.05)'
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, pb: 1, borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
             <SlidersHorizontal size={18} color="#38bdf8" />
-            <Typography variant="subtitle2" sx={{ color: '#f8fafc', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>
+            <Typography variant="subtitle2" sx={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>
               Consola de Comandos y Maniobra (HMI 3.0)
             </Typography>
           </Box>
@@ -486,8 +499,7 @@ const TankStateWebSocketForm: FC = () => {
                     label={data.cmd_fill ? "EN LLENADO" : "DETENIDO"} 
                     size="small" 
                     sx={{ 
-                      bgcolor: data.cmd_fill ? '#0288d1' : '#334155', 
-                      color: '#fff', 
+                      bgcolor: data.cmd_fill ? '#0288d1' : (isDark ? '#334155' : '#e2e8f0'), color: data.cmd_fill ? '#fff' : (isDark ? '#cbd5e1' : '#475569'), 
                       fontWeight: 700, 
                       fontSize: '9px',
                       fontFamily: 'monospace'
@@ -535,8 +547,7 @@ const TankStateWebSocketForm: FC = () => {
                     label={data.cmd_rieg ? "REGANDO" : "APAGADO"} 
                     size="small" 
                     sx={{ 
-                      bgcolor: data.cmd_rieg ? '#10b981' : '#334155', 
-                      color: '#fff', 
+                      bgcolor: data.cmd_rieg ? '#10b981' : (isDark ? '#334155' : '#e2e8f0'), color: data.cmd_rieg ? '#fff' : (isDark ? '#cbd5e1' : '#475569'), 
                       fontWeight: 700, 
                       fontSize: '9px',
                       fontFamily: 'monospace'
@@ -649,7 +660,7 @@ const TankStateWebSocketForm: FC = () => {
         </Dialog>
 
       </Box>
-    </SectionContent>
+    </Box>
   );
 };
 

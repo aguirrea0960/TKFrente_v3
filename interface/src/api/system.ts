@@ -26,3 +26,7 @@ export function updateOTASettings(otaSettings: OTASettings): AxiosPromise<OTASet
 export const uploadFirmware = (file: File, config?: FileUploadConfig): AxiosPromise<void> => (
   uploadFile('/uploadFirmware', file, config)
 );
+
+export const uploadFS = (file: File, config?: FileUploadConfig): AxiosPromise<void> => (
+  uploadFile('/uploadFS', file, config)
+);

@@ -38,8 +38,8 @@ const LayoutAuthMenu: FC = () => {
           py: 0.6,
           px: 1.5,
           borderRadius: 2,
-          bgcolor: 'rgba(255, 255, 255, 0.08)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+          border: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}`,
           transition: 'all 0.2s ease',
           '&:hover': {
             bgcolor: 'rgba(255, 255, 255, 0.14)',
@@ -52,7 +52,7 @@ const LayoutAuthMenu: FC = () => {
         <Typography 
           variant="body2" 
           sx={{ 
-            color: '#f8fafc', 
+            color: (theme) => theme.palette.mode === 'dark' ? '#f8fafc' : '#0f172a', 
             fontWeight: 700, 
             letterSpacing: '0.02em',
             userSelect: 'none'

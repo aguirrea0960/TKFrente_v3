@@ -5,4 +5,5 @@ export interface Features {
   ntp: boolean;
   ota: boolean;
   upload_firmware: boolean;
+  upload_filesystem?: boolean;
 }

@@ -13,20 +13,17 @@ class TankMqttSettings {
   String mqttPath;
   String name;
   String uniqueId;
-  String pumpPath;
   
   static void read(TankMqttSettings& settings, JsonObject& root) {
     root["mqtt_path"] = settings.mqttPath;
     root["name"]      = settings.name;
     root["unique_id"] = settings.uniqueId;
-    root["pump_path"] = settings.pumpPath;   // Topico de bomba asociada.
   }
 
   static StateUpdateResult update(JsonObject& root, TankMqttSettings& settings) {
     settings.mqttPath = root["mqtt_path"] | SettingValue::format("water/tank/#{unique_id}");
     settings.name     = root["name"] | SettingValue::format("TK-#{unique_id}");
     settings.uniqueId = root["unique_id"] | SettingValue::format("tank-#{unique_id}");
-    settings.pumpPath = root["pump_path"] | SettingValue::format("water/pump-#{unique_id}");
     return StateUpdateResult::CHANGED;
   }
 };

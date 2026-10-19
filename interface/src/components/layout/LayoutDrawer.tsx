@@ -1,20 +1,10 @@
-import { FC } from 'react';
-import { Box, Divider, Drawer, Toolbar, Typography, styled } from '@mui/material';
+import { FC, useState, useEffect } from 'react';
+import { Box, Divider, Drawer, Toolbar, Typography } from '@mui/material';
+import { Waves } from 'lucide-react';
 
-import { PROJECT_NAME } from '../../api/env';
 import LayoutMenu from './LayoutMenu';
 import { DRAWER_WIDTH } from './Layout';
-
-const LayoutDrawerLogo = styled('img')(({ theme }) => ({
-  [theme.breakpoints.down("sm")]: {
-    height: 28,
-    marginRight: theme.spacing(2)
-  },
-  [theme.breakpoints.up("sm")]: {
-    height: 38,
-    marginRight: theme.spacing(2)
-  }
-}));
+import * as DemoApi from '../../project/api';
 
 interface LayoutDrawerProps {
   mobileOpen: boolean;
@@ -22,14 +12,57 @@ interface LayoutDrawerProps {
 }
 
 const LayoutDrawer: FC<LayoutDrawerProps> = ({ mobileOpen, onClose }) => {
+  const [tankName, setTankName] = useState(() => localStorage.getItem('tank_device_name') || 'Tanque Frente');
+
+  useEffect(() => {
+    DemoApi.readBrokerSettings()
+      .then(res => {
+        if (res.data?.name) {
+          setTankName(res.data.name);
+          localStorage.setItem('tank_device_name', res.data.name);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const drawer = (
     <>
-      <Toolbar disableGutters>
-        <Box display="flex" alignItems="center" px={2}>
-          <LayoutDrawerLogo src="/app/tanque.png" alt={PROJECT_NAME} />
-          <Typography variant="h6" color="textPrimary" sx={{ fontWeight: 800 }}>
-            {PROJECT_NAME}
-          </Typography>
+      <Toolbar disableGutters sx={{ minHeight: '64px !important', px: 2 }}>
+        <Box display="flex" alignItems="center" gap={1.5} width="100%">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 38,
+              height: 38,
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#ffffff',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+              flexShrink: 0
+            }}
+          >
+            <Waves size={22} />
+          </Box>
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: 800, 
+                lineHeight: 1.2, 
+                color: 'text.primary',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden'
+              }}
+            >
+              {tankName}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: 0.5 }}>
+              SCADA v3.0
+            </Typography>
+          </Box>
         </Box>
         <Divider absolute />
       </Toolbar>

@@ -17,6 +17,9 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 #endif
 #if FT_ENABLED(FT_UPLOAD_FIRMWARE)
     _uploadFirmwareService(server, &_securitySettingsService),
+    #if FT_ENABLED(FT_UPLOAD_FILESYSTEM)
+    _uploadFSService(server, &_securitySettingsService),
+#endif
 #endif
 #if FT_ENABLED(FT_MQTT)
     _mqttSettingsService(server, &ESPFS, &_securitySettingsService),

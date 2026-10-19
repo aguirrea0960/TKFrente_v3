@@ -1,4 +1,5 @@
 import React from 'react';
+import { useThemeMode } from '../../CustomTheme';
 
 interface TankLevelIndicatorProps {
   level: number; // Nivel del 0 al 100%
@@ -13,6 +14,9 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
   fluidColor = '#3a95d2',
   showLabels = true
 }) => {
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
+
   const normalizedLevel = Math.min(Math.max(level, 0), 100);
 
   // Criterios de alarmas industriales
@@ -21,7 +25,7 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
 
   // Colores del borde en caso de alarma
   let borderGlow = 'none';
-  let tankBorderColor = '#555';
+  let tankBorderColor = isDark ? '#334155' : '#94a3b8';
   if (isHighHigh) {
     borderGlow = '0 0 15px #ff1744';
     tankBorderColor = '#ff1744';
@@ -40,13 +44,18 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         padding: '14px',
-        backgroundColor: '#e0e0e0',
+        background: isDark
+          ? 'linear-gradient(145deg, #182234 0%, #0f172a 100%)'
+          : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
         borderRadius: '8px',
-        border: '1px solid #bcbcbc',
-        boxShadow: '2px 2px 6px rgba(0,0,0,0.2)',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #cbd5e1',
+        boxShadow: isDark
+          ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.4)'
+          : '0 2px 8px rgba(0, 0, 0, 0.06)',
         width: '190px',
         userSelect: 'none',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        transition: 'all 0.3s ease'
       }}
     >
       {/* Animación opcional para alarma visual del tanque */}
@@ -67,7 +76,7 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
         style={{
           fontSize: '11px',
           fontWeight: '900',
-          color: '#222',
+          color: isDark ? '#cbd5e1' : '#334155',
           marginBottom: '10px',
           fontFamily: 'monospace',
           letterSpacing: '1px',
@@ -83,7 +92,7 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
           position: 'relative',
           width: '140px',
           height: '180px',
-          backgroundColor: '#111',
+          backgroundColor: '#090e17',
           borderRadius: '12px/16px',
           border: `2px solid ${tankBorderColor}`,
           boxShadow: isHighHigh ? 'tank-alarm-flash 1.2s infinite ease-in-out' : borderGlow,
@@ -197,11 +206,11 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
         <div
           style={{
             marginTop: '8px',
-            backgroundColor: '#1e1e1e',
-            border: '2px solid #555',
-            borderRadius: '3px',
+            backgroundColor: '#090e17',
+            border: isDark ? '1px solid #334155' : '1px solid #cbd5e1',
+            borderRadius: '4px',
             width: '100%',
-            padding: '4px',
+            padding: '5px',
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
@@ -223,7 +232,7 @@ export const TankLevelIndicator: React.FC<TankLevelIndicatorProps> = ({
           <span
             style={{
               fontSize: '7.5px',
-              color: '#888',
+              color: '#94a3b8',
               fontWeight: 'bold',
               marginTop: '1px',
               fontFamily: 'monospace'

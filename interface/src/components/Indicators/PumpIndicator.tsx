@@ -1,4 +1,5 @@
 import React from 'react';
+import { useThemeMode } from '../../CustomTheme';
 
 interface PumpIndicatorProps {
   label: string;
@@ -13,38 +14,48 @@ export const PumpIndicator: React.FC<PumpIndicatorProps> = ({
   onClick,
   rotation = 0
 }) => {
-  let mainColor = '#777'; // stopped
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
+
+  let mainColor = '#777';
   let glowColor = 'transparent';
   let isRunning = false;
   let isFlashing = false;
 
   if (state === 'running') {
-    mainColor = '#39ff14'; // green
+    mainColor = '#39ff14';
     glowColor = 'rgba(57, 255, 20, 0.5)';
     isRunning = true;
   } else if (state === 'stopped') {
-    mainColor = '#ff3131'; // red/stopped
+    mainColor = '#ff3131';
     glowColor = 'rgba(255, 49, 49, 0.2)';
   } else if (state === 'fault') {
-    mainColor = '#ffea00'; // yellow/fault
+    mainColor = '#ffea00';
     glowColor = 'rgba(255, 234, 0, 0.4)';
     isFlashing = true;
   }
 
   return (
     <div
+      onClick={onClick}
       style={{
         display: 'inline-flex',
         flexDirection: 'column',
         alignItems: 'center',
         padding: '10px',
-        backgroundColor: '#e0e0e0',
-        borderRadius: '4px',
-        border: '1px solid #bcbcbc',
-        boxShadow: '1px 1px 2px rgba(0,0,0,0.1)',
-        width: '90px',
+        background: isDark
+          ? 'linear-gradient(145deg, #182234 0%, #0f172a 100%)'
+          : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+        borderRadius: '8px',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #cbd5e1',
+        boxShadow: isDark
+          ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.4)'
+          : '0 2px 8px rgba(0, 0, 0, 0.06)',
+        width: '92px',
         userSelect: 'none',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.3s ease'
       }}
     >
       <style>
@@ -60,14 +71,51 @@ export const PumpIndicator: React.FC<PumpIndicatorProps> = ({
           }
         `}
       </style>
-
-      {/* Etiqueta del motor/bomba */}
+      <div
+        style={{
+          width: '56px',
+          height: '56px',
+          backgroundColor: '#090e17',
+          borderRadius: '50%',
+          border: isDark ? '1px solid #334155' : '1px solid #cbd5e1',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.6)'
+        }}
+      >
+        <svg
+          width="46"
+          height="46"
+          viewBox="0 0 100 100"
+          style={{
+            transform: `rotate(${rotation}deg)`,
+            filter: `drop-shadow(0 0 6px ${glowColor})`,
+            animation: isFlashing ? 'pump-alarm 1s infinite ease-in-out' : 'none'
+          }}
+        >
+          <circle cx="50" cy="50" r="42" fill="#1e293b" stroke={mainColor} strokeWidth="4" />
+          <g
+            style={{
+              transformOrigin: '50px 50px',
+              animation: isRunning ? 'pump-spin 1.2s infinite linear' : 'none'
+            }}
+          >
+            <circle cx="50" cy="50" r="12" fill={mainColor} />
+            <path d="M 50,50 Q 50,25 35,16" stroke={mainColor} strokeWidth="4" fill="none" strokeLinecap="round" />
+            <path d="M 50,50 Q 75,50 84,35" stroke={mainColor} strokeWidth="4" fill="none" strokeLinecap="round" />
+            <path d="M 50,50 Q 50,75 65,84" stroke={mainColor} strokeWidth="4" fill="none" strokeLinecap="round" />
+            <path d="M 50,50 Q 25,50 16,65" stroke={mainColor} strokeWidth="4" fill="none" strokeLinecap="round" />
+          </g>
+          <polygon points="50,8 90,8 80,24 50,24" fill="#334155" stroke={mainColor} strokeWidth="2" />
+        </svg>
+      </div>
       <span
         style={{
-          fontSize: '9px',
+          fontSize: '9.5px',
           fontWeight: '900',
-          color: '#444',
-          marginBottom: '6px',
+          color: isDark ? '#cbd5e1' : '#334155',
+          marginTop: '6px',
           fontFamily: 'monospace',
           letterSpacing: '0.5px',
           textAlign: 'center'
@@ -75,83 +123,17 @@ export const PumpIndicator: React.FC<PumpIndicatorProps> = ({
       >
         {label.toUpperCase()}
       </span>
-
-      {/* Caja de contención de la bomba */}
-      <div
-        onClick={onClick}
-        style={{
-          width: '60px',
-          height: '60px',
-          backgroundColor: '#2b2b2b',
-          border: '1px solid #777',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: onClick ? 'pointer' : 'default',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7)',
-          position: 'relative',
-          animation: isFlashing ? 'pump-alarm 1s infinite ease-in-out' : 'none',
-          filter: `drop-shadow(0 0 4px ${glowColor})`,
-          transition: 'all 0.3s ease'
-        }}
-      >
-        {/* SVG de la bomba centrífuga */}
-        <svg
-          width="50"
-          height="50"
-          viewBox="0 0 50 50"
-          style={{ 
-            position: 'absolute',
-            transform: `rotate(${rotation}deg)`,
-            transformOrigin: '25px 25px'
-          }}
-        >
-          {/* Voluta/Carcasa externa de la bomba (No gira) */}
-          <path
-            d="M 25,5 A 20,20 0 1,1 15,42 L 5,42 L 5,34 L 10,34 A 20,20 0 0,1 25,5 Z"
-            fill="none"
-            stroke="#555"
-            strokeWidth="1.5"
-          />
-          {/* Flecha indicadora de descarga centrífuga */}
-          <polygon
-            points="5,38 0,38 5,34 5,42"
-            fill="#555"
-          />
-
-          {/* Eje y Aspas del Impulsor (Gira cuando isRunning = true) */}
-          <g
-            style={{
-              transformOrigin: '25px 25px',
-              animation: isRunning ? 'pump-spin 1s infinite linear' : 'none',
-              transition: 'transform 0.5s ease-out'
-            }}
-          >
-            {/* Círculo del rotor central */}
-            <circle cx="25" cy="25" r="16" fill={mainColor} stroke="#111" strokeWidth="1" />
-            <circle cx="25" cy="25" r="4" fill="#111" />
-            
-            {/* Álabes / Aspas de la bomba */}
-            <line x1="25" y1="9" x2="25" y2="41" stroke="#111" strokeWidth="2.5" />
-            <line x1="9" y1="25" x2="41" y2="25" stroke="#111" strokeWidth="2.5" />
-            <line x1="13.7" y1="13.7" x2="36.3" y2="36.3" stroke="#111" strokeWidth="2.5" />
-            <line x1="13.7" y1="36.3" x2="36.3" y2="13.7" stroke="#111" strokeWidth="2.5" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Estado */}
       <span
         style={{
-          fontSize: '8.5px',
-          marginTop: '6px',
-          fontWeight: 'bold',
+          fontSize: '8px',
           fontFamily: 'monospace',
-          color: state === 'running' ? '#008000' : state === 'stopped' ? '#c62828' : '#e65100'
+          fontWeight: 'bold',
+          color: mainColor,
+          marginTop: '2px',
+          letterSpacing: '0.5px'
         }}
       >
-        {state === 'running' ? 'RUN' : state.toUpperCase()}
+        {state === 'running' ? 'RUNNING' : state === 'stopped' ? 'STOPPED' : 'FAULT'}
       </span>
     </div>
   );

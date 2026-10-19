@@ -37,6 +37,11 @@ void FeaturesService::features(AsyncWebServerRequest* request) {
 #else
   root["upload_firmware"] = false;
 #endif
+  #if FT_ENABLED(FT_UPLOAD_FILESYSTEM)
+  root["upload_filesystem"] = true;
+#else
+  root["upload_filesystem"] = false;
+#endif
   response->setLength();
   request->send(response);
 }

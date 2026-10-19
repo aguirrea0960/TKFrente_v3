@@ -21,7 +21,6 @@ export interface TankMqttSettings {
   unique_id: string;
   name: string;
   mqtt_path: string;
-  pump_path: string;
 }
 
 export interface TankSettings {
