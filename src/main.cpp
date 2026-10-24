@@ -239,9 +239,10 @@ void pollPumpStatus() {
     return;
   }
 
+  static int pumpFailStreak = 0;
   WiFiClient client;
   HTTPClient http;
-  http.setTimeout(800); // 800ms para evitar bloqueo
+  http.setTimeout(400); // 400ms para evitar bloqueo del loop
   String url = "http://" + host + "/rest/devState";
   http.begin(client, url);
   int code = http.GET();
@@ -250,6 +251,7 @@ void pollPumpStatus() {
     DynamicJsonDocument doc(1024);
     DeserializationError err = deserializeJson(doc, http.getString());
     if (!err) {
+      pumpFailStreak = 0;
       // 1. Estado de la bomba:
       if (doc.containsKey("pump_running") || doc.containsKey("pump_on")) {
         isPumpOnline  = true;
@@ -267,14 +269,18 @@ void pollPumpStatus() {
         isPumpFail    = doc["pump_fail"] | false;
       }
     } else {
+      if (++pumpFailStreak >= 3) {
+        isPumpOnline = false;
+        isPumpRunning = false;
+        isPumpFail = false;
+      }
+    }
+  } else {
+    if (++pumpFailStreak >= 3) {
       isPumpOnline = false;
       isPumpRunning = false;
       isPumpFail = false;
     }
-  } else {
-    isPumpOnline = false;
-    isPumpRunning = false;
-    isPumpFail = false;
   }
   http.end();
 }
@@ -508,13 +514,26 @@ void IOMonitor(boolean forceUpdate) {
       
       dataUpdated = forceUpdate;
 
-      // Hay cambios de estado en variables de proceso o en estado de la bomba?
-      if ((levelState == state.levelstate) && (distCalc == state.Level) && (vslsState == state.vsState) &&
-          (state.cmdrieg == lastCmdRieg) && (state.time_rem == TimeSeg) && (state.time_vsoper == vsTimeSegFin) &&
-          (state.vsMotOn == vsmotorOn) && (dataUpdated == state.dataupdate) &&
+      static bool lastCmdFill = false;
+      static bool lastSov1On  = false;
+      static bool lastSov2On  = false;
+      static unsigned long lastHeartbeatTime = 0;
+      bool heartbeatDue = (millis() - lastHeartbeatTime >= 1000);
+
+      // Hay cambios de estado en variables de proceso o en estado de la bomba o venció el heartbeat de 1s?
+      if (!heartbeatDue && !dataUpdated &&
+          (levelState == state.levelstate) && (distCalc == state.Level) && (vslsState == state.vsState) &&
+          (state.cmdrieg == lastCmdRieg) && (state.cmdfill == lastCmdFill) && 
+          (state.sov1On == lastSov1On) && (state.sov2On == lastSov2On) &&
+          (state.time_rem == TimeSeg) && (state.time_vsoper == vsTimeSegFin) &&
+          (state.vsMotOn == vsmotorOn) &&
           (state.pump_online == isPumpOnline) && (state.pump_running == isPumpRunning) && (state.pump_fail == isPumpFail)){
         return StateUpdateResult::UNCHANGED;  // No hay cambios de estado.
       } else {                                // Reportar cambios en estados.
+        lastHeartbeatTime = millis();
+        lastCmdFill       = state.cmdfill;
+        lastSov1On        = state.sov1On;
+        lastSov2On        = state.sov2On;
         state.swhlvlOn    = laststate_hls;
         state.Level       = distCalc;
         state.levelstate  = levelState;       // Estado consolidado de sensores discretos de nivel de agua.

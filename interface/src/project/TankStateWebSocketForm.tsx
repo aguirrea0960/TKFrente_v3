@@ -341,7 +341,7 @@ const TankStateWebSocketForm: FC = () => {
                   thickness={14} 
                 />
               </Box>
-              <Typography variant="caption" sx={{ color: data.sov1_on ? '#39ff14' : '#64748b', fontFamily: 'monospace', fontWeight: 'bold' }}>
+              <Typography variant="caption" sx={{ color: data.sov1_on ? (isDark ? '#39ff14' : '#64748b') : '#64748b', fontFamily: 'monospace', fontWeight: 'bold' }}>
                 {data.sov1_on ? 'LLENANDO TANQUE' : 'CERRADA'}
               </Typography>
             </Box>
@@ -395,10 +395,10 @@ const TankStateWebSocketForm: FC = () => {
                 />
               </Box>
               <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                <Typography variant="caption" sx={{ color: currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold' }}>
+                <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold' }}>
                   MV01: {currentVsState.desc.toUpperCase()} ({data.time_vsoper}s)
                 </Typography>
-                <Typography variant="caption" sx={{ color: isBombaEnMarcha ? '#39ff14' : (isBombaOnline ? '#94a3b8' : '#ff3131'), fontFamily: 'monospace', fontWeight: 'bold' }}>
+                <Typography variant="caption" sx={{ color: isBombaEnMarcha ? (isDark ? '#39ff14' : '#64748b') : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131'), fontFamily: 'monospace', fontWeight: 'bold' }}>
                   BOMBA: {isBombaEnMarcha ? 'MARCHA' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')}
                 </Typography>
               </Box>

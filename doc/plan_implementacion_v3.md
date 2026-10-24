@@ -105,12 +105,23 @@ npm run build
 
 ### Compilación y Carga de Firmware (PlatformIO)
 ```bash
-# Compilar firmware ESP32-S3 (incluye build de interface automático y compresión gzip hacia LittleFS):
-pio run -e esp32s3
+# Compilar firmware ESP32-C3 actual (envESP32_C3L-WiFi):
+pio run -e envESP32_C3L-WiFi
 
-# Cargar firmware al microcontrolador:
-pio run -e esp32s3 -t upload
-
-# Cargar sistema de archivos LittleFS (interfaz web comprimida):
-pio run -e esp32s3 -t uploadfs
+# Compilar sistema de archivos LittleFS (interfaz web):
+pio run -e envESP32_C3L-WiFi -t buildfs
 ```
+
+---
+
+## 5. Mejoras de Telemetría y Temas (Octubre 2026)
+
+1. **Prevención de Bloqueo y Congelamiento WebSocket**:
+   - `IOMonitor()` incorpora un heartbeat de 1000 ms garantizando flujo continuo de telemetría hacia los navegadores web.
+   - Seguimiento explícito de conmutación de válvulas solenoides (`cmdfill`, `sov1On`, `sov2On`) para refresco instantáneo en la UI.
+2. **Estabilización de Bomba de Llenado (`pollPumpStatus`)**:
+   - Reducción del timeout HTTP a 400 ms para eliminar latencias en el bucle principal.
+   - Filtro de 3 reintentos fallidos consecutivos para evitar parpadeos `OFFLINE` espurios.
+3. **Unificación de Temas Light / Dark**:
+   - Estados inferiores de `MV01`, `BOMBA` y `LLENANDO TANQUE` mantienen el verde brillante (`#39ff14`) en Dark Mode y conmutan al gris suave (`#64748b`) en Light Mode, logrando coherencia visual con el Cabezal de Distribución.
+
