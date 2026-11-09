@@ -337,10 +337,23 @@ const TankStateWebSocketForm: FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: { xs: 2, md: 3 } }}>
             
             {/* 1. LÍNEA DE SUMINISTRO AL TANQUE (Válvula SOV1 de Llenado) */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: 1, 
+              bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+              p: 1.5, 
+              borderRadius: 2, 
+              border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
+              width: 210,
+              minWidth: 210,
+              maxWidth: 210,
+              boxSizing: 'border-box'
+            }}>
               <Typography variant="caption" sx={{ color: '#38bdf8', fontWeight: 800, textAlign: 'center' }}>
                 SUMINISTRO DE AGUA
               </Typography>
@@ -371,7 +384,7 @@ const TankStateWebSocketForm: FC = () => {
             </Box>
 
             {/* 2. EL TANQUE DE AGUA CON BOYAS */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mx: 0.5 }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <IndustrialAnnunciator 
                   label="BOYA HLS" 
@@ -389,7 +402,20 @@ const TankStateWebSocketForm: FC = () => {
             </Box>
 
             {/* 3. SUCCIÓN DE BOMBA A TRAVÉS DE MV01 */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: 1, 
+              bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+              p: 1.5, 
+              borderRadius: 2, 
+              border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
+              width: 380,
+              minWidth: 380,
+              maxWidth: 380,
+              boxSizing: 'border-box'
+            }}>
               <Typography variant="caption" sx={{ color: '#00e5ff', fontWeight: 800, textAlign: 'center' }}>
                 SUCCIÓN BOMBA (VÍA MV01)
               </Typography>
@@ -418,18 +444,31 @@ const TankStateWebSocketForm: FC = () => {
                   state={isBombaConFlujo ? 'running' : 'stopped'} 
                 />
               </Box>
-              <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold' }}>
+              <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5, width: '100%', justifyContent: 'space-between', px: 1, boxSizing: 'border-box' }}>
+                <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
                   MV01: {currentVsState.desc.toUpperCase()} ({data.time_vsoper}s)
                 </Typography>
-                <Typography variant="caption" sx={{ color: isBombaConFlujo ? (isDark ? '#39ff14' : '#64748b') : (isBombaFail ? '#ff3131' : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131')), fontFamily: 'monospace', fontWeight: 'bold' }}>
+                <Typography variant="caption" sx={{ color: isBombaConFlujo ? (isDark ? '#39ff14' : '#64748b') : (isBombaFail ? '#ff3131' : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131')), fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
                   BOMBA: {isBombaConFlujo ? 'CON FLUJO' : (isBombaFail ? 'FALLA AGUA' : (isBombaRunning ? 'ARRANCANDO' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')))}
                 </Typography>
               </Box>
             </Box>
 
             {/* 4. CABEZAL DE SALIDA DE BOMBA: CASA Y SOV2 RIEGO */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', p: 1.5, borderRadius: 2, border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: 1, 
+              bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+              p: 1.5, 
+              borderRadius: 2, 
+              border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
+              width: 250,
+              minWidth: 250,
+              maxWidth: 250,
+              boxSizing: 'border-box'
+            }}>
               <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 800, textAlign: 'center' }}>
                 CABEZAL DE DISTRIBUCIÓN
               </Typography>

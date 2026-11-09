@@ -620,11 +620,12 @@ void IOMonitor(boolean forceUpdate) {
   // ----------------------------------------------------------------------------------------
   bool isFillingActive = digitalRead(tankStateService._pinSOV1);
   if (isFillingActive) {
-    // La protección contra falta de agua SOLO debe activarse si la bomba de llenado está
-    // en línea y reporta FALLA DE AGUA activa (isPumpFail == true).
-    // Si se llena de la red pública con la bomba apagada (gravedad/presión de calle),
-    // o si la bomba está en marcha con flujo estable (!isPumpFail), la protección NO cierra SOV1.
-    bool pumpWaterFailure = isPumpOnline && isPumpFail;
+    // La protección contra falta de agua SOLO aplica a LLENADO ORDINARIO.
+    // Si el usuario está ejecutando una RECIRCULACIÓN (purga o cebado con MV01 al 25% o 50%),
+    // la bomba suele reportar falta de flujo mientras se purga el aire; la protección se INHIBE
+    // totalmente durante la recirculación para no cancelar el cebado.
+    bool isRecircActive = tankStateService.isRecirculating() || (recircIndex > 0);
+    bool pumpWaterFailure = isPumpOnline && isPumpFail && !isRecircActive;
 
     if (pumpWaterFailure) {
       waterFailTicks++;
@@ -635,7 +636,7 @@ void IOMonitor(boolean forceUpdate) {
       // Alarma periódica por serial cada 5 segundos:
       if (waterFailTicks % 50 == 0) {
         Serial.printf(
-            "[ALARMA] Bomba en falla de agua durante llenado (%u/%u s)...\n",
+            "[ALARMA] Bomba en falla de agua durante llenado ordinario (%u/%u s)...\n",
             waterFailTicks / 10, tankSettingsService.readWaterFailTime());
       }
 
@@ -647,14 +648,6 @@ void IOMonitor(boolean forceUpdate) {
             [&](TankState &state) {
               state.cmdfill = false;
               state.sov1On = false;
-              // En caso de estar en maniobra de recirculación, cerrar también
-              // la válvula motorizada MV01:
-              if (state.tkstate == TS_REC_25 || state.tkstate == TS_REC_50) {
-                state.cmdRec25 = false;
-                state.cmdRec50 = false;
-                state.vsCmnd = false;
-                state.vsMotOn = true;
-              }
               state.tkstate = TS_IDLE;
               return StateUpdateResult::CHANGED;
             },
@@ -662,7 +655,7 @@ void IOMonitor(boolean forceUpdate) {
         waterFailTicks = 0;
       }
     } else {
-      // Flujo normal o llenado pasivo sin falla: inhibición activa, no se cierra la válvula:
+      // Flujo normal, llenado pasivo o maniobra de recirculación: inhibición activa, no se cierra la válvula:
       waterFailTicks = 0;
     }
 
