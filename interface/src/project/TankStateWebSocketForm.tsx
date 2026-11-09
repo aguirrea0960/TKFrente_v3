@@ -337,7 +337,14 @@ const TankStateWebSocketForm: FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: { xs: 2, md: 3 } }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexWrap: { xs: 'wrap', lg: 'nowrap' }, 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            width: '100%',
+            gap: { xs: 1.5, md: 2 } 
+          }}>
             
             {/* 1. LÍNEA DE SUMINISTRO AL TANQUE (Válvula SOV1 de Llenado) */}
             <Box sx={{ 
@@ -349,10 +356,11 @@ const TankStateWebSocketForm: FC = () => {
               p: 1.5, 
               borderRadius: 2, 
               border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
-              width: 210,
-              minWidth: 210,
-              maxWidth: 210,
-              boxSizing: 'border-box'
+              width: 175,
+              minWidth: 175,
+              maxWidth: 175,
+              boxSizing: 'border-box',
+              flexShrink: 0
             }}>
               <Typography variant="caption" sx={{ color: '#38bdf8', fontWeight: 800, textAlign: 'center' }}>
                 SUMINISTRO DE AGUA
@@ -362,7 +370,7 @@ const TankStateWebSocketForm: FC = () => {
                   flowActive={isSuministroActivo} 
                   fluidColor="#0288d1" 
                   direction="right" 
-                  length={40} 
+                  length={22} 
                   thickness={14} 
                 />
                 <ValveIndicator 
@@ -374,17 +382,17 @@ const TankStateWebSocketForm: FC = () => {
                   flowActive={isSuministroActivo} 
                   fluidColor="#0288d1" 
                   direction="right" 
-                  length={40} 
+                  length={22} 
                   thickness={14} 
                 />
               </Box>
-              <Typography variant="caption" sx={{ color: data.sov1_on ? (isDark ? '#39ff14' : '#64748b') : '#64748b', fontFamily: 'monospace', fontWeight: 'bold' }}>
+              <Typography variant="caption" sx={{ color: data.sov1_on ? (isDark ? '#39ff14' : '#64748b') : '#64748b', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px' }}>
                 {data.sov1_on ? 'LLENANDO TANQUE' : 'CERRADA'}
               </Typography>
             </Box>
 
             {/* 2. EL TANQUE DE AGUA CON BOYAS */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mx: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <IndustrialAnnunciator 
                   label="BOYA HLS" 
@@ -411,10 +419,11 @@ const TankStateWebSocketForm: FC = () => {
               p: 1.5, 
               borderRadius: 2, 
               border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
-              width: 380,
-              minWidth: 380,
-              maxWidth: 380,
-              boxSizing: 'border-box'
+              width: 320,
+              minWidth: 320,
+              maxWidth: 320,
+              boxSizing: 'border-box',
+              flexShrink: 0
             }}>
               <Typography variant="caption" sx={{ color: '#00e5ff', fontWeight: 800, textAlign: 'center' }}>
                 SUCCIÓN BOMBA (VÍA MV01)
@@ -424,7 +433,7 @@ const TankStateWebSocketForm: FC = () => {
                   flowActive={isSuccionBombaActiva} 
                   fluidColor="#00e5ff" 
                   direction="right" 
-                  length={35} 
+                  length={22} 
                   thickness={14} 
                 />
                 <ValveIndicator 
@@ -436,7 +445,7 @@ const TankStateWebSocketForm: FC = () => {
                   flowActive={isSuccionBombaActiva} 
                   fluidColor="#00e5ff" 
                   direction="right" 
-                  length={35} 
+                  length={22} 
                   thickness={14} 
                 />
                 <PumpIndicator 
@@ -444,11 +453,11 @@ const TankStateWebSocketForm: FC = () => {
                   state={isBombaConFlujo ? 'running' : 'stopped'} 
                 />
               </Box>
-              <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5, width: '100%', justifyContent: 'space-between', px: 1, boxSizing: 'border-box' }}>
-                <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, width: '100%', justifyContent: 'space-between', px: 0.5, boxSizing: 'border-box' }}>
+                <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
                   MV01: {currentVsState.desc.toUpperCase()} ({data.time_vsoper}s)
                 </Typography>
-                <Typography variant="caption" sx={{ color: isBombaConFlujo ? (isDark ? '#39ff14' : '#64748b') : (isBombaFail ? '#ff3131' : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131')), fontFamily: 'monospace', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                <Typography variant="caption" sx={{ color: isBombaConFlujo ? (isDark ? '#39ff14' : '#64748b') : (isBombaFail ? '#ff3131' : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131')), fontFamily: 'monospace', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
                   BOMBA: {isBombaConFlujo ? 'CON FLUJO' : (isBombaFail ? 'FALLA AGUA' : (isBombaRunning ? 'ARRANCANDO' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')))}
                 </Typography>
               </Box>
@@ -464,10 +473,11 @@ const TankStateWebSocketForm: FC = () => {
               p: 1.5, 
               borderRadius: 2, 
               border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
-              width: 250,
-              minWidth: 250,
-              maxWidth: 250,
-              boxSizing: 'border-box'
+              width: 215,
+              minWidth: 215,
+              maxWidth: 215,
+              boxSizing: 'border-box',
+              flexShrink: 0
             }}>
               <Typography variant="caption" sx={{ color: '#34d399', fontWeight: 800, textAlign: 'center' }}>
                 CABEZAL DE DISTRIBUCIÓN
@@ -475,14 +485,14 @@ const TankStateWebSocketForm: FC = () => {
               
               {/* Salida a Casa */}
               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700 }}>
+                <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px' }}>
                   A CASA:
                 </Typography>
                 <PipeFlow 
                   flowActive={servicioCasa.flowActive} 
                   fluidColor="#00e5ff" 
                   direction="right" 
-                  length={60} 
+                  length={35} 
                   thickness={12} 
                 />
                 <Chip 
@@ -491,23 +501,24 @@ const TankStateWebSocketForm: FC = () => {
                   sx={{ 
                     bgcolor: servicioCasa.bg, 
                     color: servicioCasa.color, 
-                    fontSize: '9px',
+                    fontSize: '8.5px',
                     fontWeight: 700,
-                    fontFamily: 'monospace'
+                    fontFamily: 'monospace',
+                    height: 20
                   }} 
                 />
               </Box>
 
               {/* Salida a Riego (SOV2) */}
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', mt: 1 }}>
-                <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', mt: 0.5 }}>
+                <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px' }}>
                   A RIEGO:
                 </Typography>
                 <PipeFlow 
                   flowActive={isRiegoActivo} 
                   fluidColor="#10b981" 
                   direction="right" 
-                  length={35} 
+                  length={25} 
                   thickness={12} 
                 />
                 <ValveIndicator 
@@ -516,7 +527,7 @@ const TankStateWebSocketForm: FC = () => {
                   onClick={() => handleToggle('cmd_rieg')}
                 />
               </Box>
-              <Typography variant="caption" sx={{ color: data.sov2_on ? '#10b981' : '#64748b', fontFamily: 'monospace', fontWeight: 'bold' }}>
+              <Typography variant="caption" sx={{ color: data.sov2_on ? '#10b981' : '#64748b', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '10px' }}>
                 {data.sov2_on ? `REGANDO (${formatTimer(data.time_rem)})` : 'RIEGO APAGADO'}
               </Typography>
             </Box>
