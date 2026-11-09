@@ -1,7 +1,8 @@
 #include <ESP8266React.h>
 #ifdef ESP32
-#include <nvs_flash.h>
 #include <Preferences.h>
+#include <nvs_flash.h>
+
 #endif
 #include <TankMqttSettingsService.h>
 #include <TankSettingsService.h>
@@ -14,7 +15,8 @@ void setNvFillingFlag(bool active) {
   if (nvPrefs.begin("tk_nv", false)) {
     if (nvPrefs.getBool("filling", false) != active) {
       nvPrefs.putBool("filling", active);
-      Serial.printf("[NV] Estado de llenado persistente actualizado: %s\n", active ? "ACTIVO" : "INACTIVO");
+      Serial.printf("[NV] Estado de llenado persistente actualizado: %s\n",
+                    active ? "ACTIVO" : "INACTIVO");
     }
     nvPrefs.end();
   }
@@ -140,7 +142,8 @@ const uint32_t PUMP_POLL_INTERVAL_MS = 3000; // Sondeo cada 3 segundos
 // Variables para reanudación segura de llenado tras reinicio / corte de AC:
 bool pendingNvFillRecovery = false;
 uint32_t nvRecoveryStartTime = 0;
-const uint32_t NV_RECOVERY_TIMEOUT_MS = 20000; // 20s de espera máxima para confirmación de Bomba
+const uint32_t NV_RECOVERY_TIMEOUT_MS =
+    20000; // 20s de espera máxima para confirmación de Bomba
 
 // Watchdog de seguridad de llenado continuo (40 minutos en ticks de 100ms):
 uint32_t fillWatchdogTicks = 0;
@@ -358,7 +361,8 @@ void checkNvFillRecovery() {
 
   // Timeout si no hubo respuesta de la bomba en 20 segundos:
   if (millis() - nvRecoveryStartTime > NV_RECOVERY_TIMEOUT_MS) {
-    Serial.println("[NV] Timeout (20s) sin confirmación de Bomba tras reinicio. Anulando reanudación de llenado.");
+    Serial.println("[NV] Timeout (20s) sin confirmación de Bomba tras "
+                   "reinicio. Anulando reanudación de llenado.");
     pendingNvFillRecovery = false;
     setNvFillingFlag(false);
     return;
@@ -371,22 +375,28 @@ void checkNvFillRecovery() {
 
   // Si la bomba está online y confirmada en marcha sin fallas:
   if (isPumpRunning && !isPumpFail) {
-    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^ tankSettingsService.readHLS_InvFlag();
+    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^
+                         tankSettingsService.readHLS_InvFlag();
     if (isNormalLevel) {
-      Serial.println("[NV] ¡Bomba confirmada en marcha y operativa! Reanudando llenado tras reinicio...");
-      tankStateService.update([&](TankState &state) {
-        state.cmdfill = true;
-        state.sov1On  = true;
-        state.tkstate = TS_FILL;
-        return StateUpdateResult::CHANGED;
-      }, "nv_pump_confirmed");
+      Serial.println("[NV] ¡Bomba confirmada en marcha y operativa! Reanudando "
+                     "llenado tras reinicio...");
+      tankStateService.update(
+          [&](TankState &state) {
+            state.cmdfill = true;
+            state.sov1On = true;
+            state.tkstate = TS_FILL;
+            return StateUpdateResult::CHANGED;
+          },
+          "nv_pump_confirmed");
     } else {
-      Serial.println("[NV] Tanque ya alcanzó alto nivel (HLS). Anulando reanudación de llenado.");
+      Serial.println("[NV] Tanque ya alcanzó alto nivel (HLS). Anulando "
+                     "reanudación de llenado.");
       setNvFillingFlag(false);
     }
   } else {
     // La bomba respondió pero está apagada o con falla activa:
-    Serial.printf("[NV] Bomba respondió inactiva o con falla (running=%d, fail=%d). Anulando reanudación.\n",
+    Serial.printf("[NV] Bomba respondió inactiva o con falla (running=%d, "
+                  "fail=%d). Anulando reanudación.\n",
                   isPumpRunning, isPumpFail);
     setNvFillingFlag(false);
   }
@@ -621,10 +631,12 @@ void IOMonitor(boolean forceUpdate) {
   bool isFillingActive = digitalRead(tankStateService._pinSOV1);
   if (isFillingActive) {
     // La protección contra falta de agua SOLO aplica a LLENADO ORDINARIO.
-    // Si el usuario está ejecutando una RECIRCULACIÓN (purga o cebado con MV01 al 25% o 50%),
-    // la bomba suele reportar falta de flujo mientras se purga el aire; la protección se INHIBE
-    // totalmente durante la recirculación para no cancelar el cebado.
-    bool isRecircActive = tankStateService.isRecirculating() || (recircIndex > 0);
+    // Si el usuario está ejecutando una RECIRCULACIÓN (purga o cebado con MV01
+    // al 25% o 50%), la bomba suele reportar falta de flujo mientras se purga
+    // el aire; la protección se INHIBE totalmente durante la recirculación para
+    // no cancelar el cebado.
+    bool isRecircActive =
+        tankStateService.isRecirculating() || (recircIndex > 0);
     bool pumpWaterFailure = isPumpOnline && isPumpFail && !isRecircActive;
 
     if (pumpWaterFailure) {
@@ -635,9 +647,10 @@ void IOMonitor(boolean forceUpdate) {
 
       // Alarma periódica por serial cada 5 segundos:
       if (waterFailTicks % 50 == 0) {
-        Serial.printf(
-            "[ALARMA] Bomba en falla de agua durante llenado ordinario (%u/%u s)...\n",
-            waterFailTicks / 10, tankSettingsService.readWaterFailTime());
+        Serial.printf("[ALARMA] Bomba en falla de agua durante llenado "
+                      "ordinario (%u/%u s)...\n",
+                      waterFailTicks / 10,
+                      tankSettingsService.readWaterFailTime());
       }
 
       if (waterFailTicks >= maxWaterFailTicks) {
@@ -655,7 +668,8 @@ void IOMonitor(boolean forceUpdate) {
         waterFailTicks = 0;
       }
     } else {
-      // Flujo normal, llenado pasivo o maniobra de recirculación: inhibición activa, no se cierra la válvula:
+      // Flujo normal, llenado pasivo o maniobra de recirculación: inhibición
+      // activa, no se cierra la válvula:
       waterFailTicks = 0;
     }
 
@@ -699,24 +713,18 @@ void IOMonitor(boolean forceUpdate) {
           static bool lastCmdFill = false;
           static bool lastSov1On = false;
           static bool lastSov2On = false;
-          static unsigned long lastHeartbeatTime = 0;
-          bool heartbeatDue = (millis() - lastHeartbeatTime >= 1000);
 
-          // Hay cambios de estado en variables de proceso o en estado de la
-          // bomba o venció el heartbeat de 1s?
-          if (!heartbeatDue && !dataUpdated &&
-              (levelState == state.levelstate) && (distCalc == state.Level) &&
-              (vslsState == state.vsState) && (state.cmdrieg == lastCmdRieg) &&
+          // Hay cambios reales de estado en variables físicas / hardware?
+          if (!dataUpdated && (levelState == state.levelstate) &&
+              (distCalc == state.Level) && (vslsState == state.vsState) &&
+              (state.cmdrieg == lastCmdRieg) &&
               (state.cmdfill == lastCmdFill) && (state.sov1On == lastSov1On) &&
-              (state.sov2On == lastSov2On) && (state.time_rem == TimeSeg) &&
-              (state.time_vsoper == vsTimeSegFin) &&
-              (state.vsMotOn == vsmotorOn) &&
+              (state.sov2On == lastSov2On) && (state.vsMotOn == vsmotorOn) &&
               (state.pump_online == isPumpOnline) &&
               (state.pump_running == isPumpRunning) &&
               (state.pump_fail == isPumpFail)) {
             return StateUpdateResult::UNCHANGED; // No hay cambios de estado.
-          } else {                               // Reportar cambios en estados.
-            lastHeartbeatTime = millis();
+          } else { // Reportar cambios en estados por hardware.
             if (state.cmdfill != lastCmdFill) {
               setNvFillingFlag(state.cmdfill);
             }
@@ -728,8 +736,11 @@ void IOMonitor(boolean forceUpdate) {
             state.levelstate = levelState; // Estado consolidado de sensores
                                            // discretos de nivel de agua.
             uint8_t effectiveVsState = vslsState;
-            if (vslsState == VS_MOVING && !vsmotorOn && (recircIndex > 0 || state.tkstate == TS_REC_25 || state.tkstate == TS_REC_50)) {
-              effectiveVsState = VS_RECIRC; // 4: Apertura parcial fija de recirculación
+            if (vslsState == VS_MOVING && !vsmotorOn &&
+                (recircIndex > 0 || state.tkstate == TS_REC_25 ||
+                 state.tkstate == TS_REC_50)) {
+              effectiveVsState =
+                  VS_RECIRC; // 4: Apertura parcial fija de recirculación
             }
             state.vsState = effectiveVsState;
             state.cmdrieg =
@@ -1002,14 +1013,18 @@ void setup() {
   // Comprobar si antes de falla de AC o reinicio el tanque estaba llenándose:
   bool wasFilling = getNvFillingFlag();
   if (wasFilling) {
-    // Validar si la boya HLS indica que aún hay espacio (nivel normal / no lleno):
-    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^ tankSettingsService.readHLS_InvFlag();
+    // Validar si la boya HLS indica que aún hay espacio (nivel normal / no
+    // lleno):
+    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^
+                         tankSettingsService.readHLS_InvFlag();
     if (isNormalLevel) {
-      Serial.println("[INICIO] Bandera NV de llenado activa detectada. Esperando confirmación de Bomba...");
+      Serial.println("[INICIO] Bandera NV de llenado activa detectada. "
+                     "Esperando confirmación de Bomba...");
       pendingNvFillRecovery = true;
       nvRecoveryStartTime = millis();
     } else {
-      Serial.println("[INICIO] Tanque ya alcanzó alto nivel (HLS). Anulando reanudación de llenado.");
+      Serial.println("[INICIO] Tanque ya alcanzó alto nivel (HLS). Anulando "
+                     "reanudación de llenado.");
       setNvFillingFlag(false);
     }
   }
@@ -1025,7 +1040,8 @@ void loop() {
   // Sondeo asíncrono no bloqueante de la bomba de llenado (cada 3 s):
   pollPumpStatus();
 
-  // Validación diferida de reanudación de llenado tras reinicio (esperando a la bomba):
+  // Validación diferida de reanudación de llenado tras reinicio (esperando a la
+  // bomba):
   checkNvFillRecovery();
 
   // Muestreo de Sensores cada 100mS y se reporta si y solo si hay algun cambio:
