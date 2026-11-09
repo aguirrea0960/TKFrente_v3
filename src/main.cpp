@@ -183,9 +183,9 @@ String DisStr = "";
 bool sensorOK = false;
 bool vsmotorOn;
 uint8_t MinLevel = 147, MaxLevel = 27;
-uint16_t distance;
+uint16_t distance = 0;
 uint8_t RestTime = 0;
-double distCalc;
+double distCalc = 0.0;
 uint8_t hlTime =
     0; // Tiempo para validar sensor de alto nivel en ticks de 100mS.
 uint8_t riegoCount = 0; // Contador de minutos restantes de riego..
@@ -706,55 +706,79 @@ void IOMonitor(boolean forceUpdate) {
     // main.cpp
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Calcular estado efectivo de válvula de servicio:
+    uint8_t effectiveVsState = vslsState;
+    if (vslsState == VS_MOVING && !vsmotorOn &&
+        (recircIndex > 0 || tankStateService.isRecirculating())) {
+      effectiveVsState = VS_RECIRC; // 4: Apertura parcial fija de recirculación
+    }
+
     tankStateService.update(
         [&](TankState &state) {
-          dataUpdated = forceUpdate;
+          static uint8_t lastReportedState = 255;
+          static uint8_t lastReportedVsState = 255;
+          static uint8_t lastReportedLevelState = 255;
+          static bool lastReportedSov1 = false;
+          static bool lastReportedSov2 = false;
+          static bool lastReportedVsMot = false;
+          static bool lastReportedCmdFill = false;
+          static bool lastReportedCmdRieg = false;
+          static bool lastReportedPumpOnline = false;
+          static bool lastReportedPumpRunning = false;
+          static bool lastReportedPumpFail = false;
 
-          static bool lastCmdFill = false;
-          static bool lastSov1On = false;
-          static bool lastSov2On = false;
+          // Detección estricta de cambios reales (evita ráfagas y spam continuo de MQTT/WS):
+          bool levelStateChanged = (levelState != lastReportedLevelState);
+          bool analogChanged     = (fabs(distCalc - state.Level) >= 1.0); // Banda muerta de 1.0% para ruido ultrasónico
+          bool vsStateChanged    = (effectiveVsState != lastReportedVsState);
+          bool cmdFillChanged    = (state.cmdfill != lastReportedCmdFill);
+          bool cmdRiegChanged    = (lastCmdRieg != lastReportedCmdRieg);
+          bool valveChanged      = (state.sov1On != lastReportedSov1 ||
+                                    state.sov2On != lastReportedSov2 ||
+                                    vsmotorOn != lastReportedVsMot);
+          bool pumpChanged       = (isPumpOnline != lastReportedPumpOnline ||
+                                    isPumpRunning != lastReportedPumpRunning ||
+                                    isPumpFail != lastReportedPumpFail);
 
-          // Hay cambios reales de estado en variables físicas / hardware?
-          if (!dataUpdated && (levelState == state.levelstate) &&
-              (distCalc == state.Level) && (vslsState == state.vsState) &&
-              (state.cmdrieg == lastCmdRieg) &&
-              (state.cmdfill == lastCmdFill) && (state.sov1On == lastSov1On) &&
-              (state.sov2On == lastSov2On) && (state.vsMotOn == vsmotorOn) &&
-              (state.pump_online == isPumpOnline) &&
-              (state.pump_running == isPumpRunning) &&
-              (state.pump_fail == isPumpFail)) {
-            return StateUpdateResult::UNCHANGED; // No hay cambios de estado.
-          } else { // Reportar cambios en estados por hardware.
-            if (state.cmdfill != lastCmdFill) {
-              setNvFillingFlag(state.cmdfill);
-            }
-            lastCmdFill = state.cmdfill;
-            lastSov1On = state.sov1On;
-            lastSov2On = state.sov2On;
-            state.swhlvlOn = laststate_hls;
-            state.Level = distCalc;
-            state.levelstate = levelState; // Estado consolidado de sensores
-                                           // discretos de nivel de agua.
-            uint8_t effectiveVsState = vslsState;
-            if (vslsState == VS_MOVING && !vsmotorOn &&
-                (recircIndex > 0 || state.tkstate == TS_REC_25 ||
-                 state.tkstate == TS_REC_50)) {
-              effectiveVsState =
-                  VS_RECIRC; // 4: Apertura parcial fija de recirculación
-            }
-            state.vsState = effectiveVsState;
-            state.cmdrieg =
-                lastCmdRieg;          // Finalizar riego cuando toque hacerlo..
-            state.time_rem = TimeSeg; // Actualizar tiempos en segundos.
-            state.time_vsoper = vsTimeSegFin;
-            state.vsMotOn = vsmotorOn;
-            state.pump_online = isPumpOnline;
-            state.pump_running = isPumpRunning;
-            state.pump_fail = isPumpFail;
-            state.dataupdate = false;
-            state.onIOUpdated(state);
-            return StateUpdateResult::CHANGED;
+          if (!forceUpdate && !levelStateChanged && !analogChanged && !vsStateChanged &&
+              !cmdFillChanged && !cmdRiegChanged && !valveChanged && !pumpChanged &&
+              (state.tkstate == lastReportedState)) {
+            dataUpdated = false;
+            return StateUpdateResult::UNCHANGED; // Cero paquetes si el hardware no cambia
           }
+
+          if (state.cmdfill != lastReportedCmdFill) {
+            setNvFillingFlag(state.cmdfill);
+          }
+
+          state.swhlvlOn = laststate_hls;
+          state.Level = distCalc;
+          state.levelstate = levelState;
+          state.vsState = effectiveVsState;
+          state.cmdrieg = lastCmdRieg;
+          state.time_rem = TimeSeg;
+          state.time_vsoper = vsTimeSegFin;
+          state.vsMotOn = vsmotorOn;
+          state.pump_online = isPumpOnline;
+          state.pump_running = isPumpRunning;
+          state.pump_fail = isPumpFail;
+          state.dataupdate = false;
+          state.onIOUpdated(state);
+
+          // Guardar snapshot de estados reportados:
+          lastReportedState = state.tkstate;
+          lastReportedVsState = state.vsState;
+          lastReportedLevelState = levelState;
+          lastReportedSov1 = state.sov1On;
+          lastReportedSov2 = state.sov2On;
+          lastReportedVsMot = vsmotorOn;
+          lastReportedCmdFill = state.cmdfill;
+          lastReportedCmdRieg = lastCmdRieg;
+          lastReportedPumpOnline = isPumpOnline;
+          lastReportedPumpRunning = isPumpRunning;
+          lastReportedPumpFail = isPumpFail;
+          dataUpdated = true;
+          return StateUpdateResult::CHANGED;
         },
         "tank");
   } else
@@ -934,13 +958,16 @@ void LevelMeasure() {
   // Medición de Nivel:
   case SS_LEVEL:
     if ((distance != 0) && dataOK) { // Data valida?
-
-      // Leer confuración de alturas de tanque:
+      // Leer configuración de alturas de tanque:
       MaxLevel = tankSettingsService.readMax(); // Distancia de nivel máximo.
       MinLevel = tankSettingsService.readMin(); // Distancia de nivel mínimo.
 
-      // Calcular valor % de nivel de agua del tanque:
-      distCalc = (MinLevel - distance) * 100.0 / (MinLevel - MaxLevel);
+      if (MinLevel > MaxLevel) {
+        double rawCalc = (MinLevel - distance) * 100.0 / (MinLevel - MaxLevel);
+        if (rawCalc < 0.0) rawCalc = 0.0;
+        if (rawCalc > 100.0) rawCalc = 100.0;
+        distCalc = round(rawCalc * 10.0) / 10.0; // Redondear a 1 decimal
+      }
     }
     RestTime = 0;
     SenState = SS_REST;
