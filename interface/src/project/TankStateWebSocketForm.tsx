@@ -158,6 +158,9 @@ const TankStateWebSocketForm: FC = () => {
   const isBombaRunning = data.pump_running ?? false;
   const isBombaFail = data.pump_fail ?? false;
 
+  // Sensor de flujo del PressControl: Confirma circulación activa cuando la bomba marcha sin falla de agua:
+  const isBombaConFlujo = isBombaRunning && !isBombaFail;
+
   // Permisivos lógicos:
   const canFill = true; // Control manual libre
   const canServe = !data.cmd_rec25 && !data.cmd_rec50;
@@ -165,19 +168,33 @@ const TankStateWebSocketForm: FC = () => {
 
   // Estados de flujo hidráulico exacto en LAZO CERRADO:
   const isSuministroActivo = data.sov1_on;
-  const isSuccionBombaActiva = (data.vs_state === 1 || data.vs_state === 4) && isBombaRunning;
+  // La succión está activa si el sensor de flujo confirma circulación Y la válvula MV01 está abierta o en recirculación:
+  const isSuccionBombaActiva = isBombaConFlujo && (
+    data.vs_state === 1 || data.vs_state === 4 || 
+    data.cmd_serv || data.cmd_rec25 || data.cmd_rec50 || 
+    data.state === 3 || data.state === 6 || data.state === 7
+  );
   const isBombaEnMarcha = isBombaRunning;
   const isRiegoActivo = data.sov2_on || data.cmd_rieg;
 
   // Estado del suministro a casa en Cabezal de Distribución según la válvula de servicio (MV01):
   const getServicioCasaStatus = () => {
+    // Si la bomba tiene circulación confirmada y succiona del tanque:
+    if (isBombaConFlujo && (data.cmd_serv || data.state === 3 || data.vs_state === 1 || data.vs_state === 4)) {
+      return {
+        flowActive: true,
+        label: (data.state === 6 || data.state === 7 || data.cmd_rec25 || data.cmd_rec50) ? "RECIRCULANDO" : "CIRCULANDO / REPOSICIÓN",
+        color: "#39ff14",
+        bg: "rgba(57, 255, 20, 0.15)"
+      };
+    }
     switch (data.vs_state) {
       case 1: // VS_OPEN (100% Abierta)
         return {
-          flowActive: true,
-          label: isBombaEnMarcha ? "SUMINISTRANDO" : "ABIERTO",
-          color: "#39ff14",
-          bg: "rgba(57, 255, 20, 0.15)"
+          flowActive: isBombaConFlujo,
+          label: isBombaConFlujo ? "SUMINISTRANDO" : (isBombaEnMarcha ? "ARRANCANDO" : "ABIERTO"),
+          color: isBombaConFlujo ? "#39ff14" : "#38bdf8",
+          bg: isBombaConFlujo ? "rgba(57, 255, 20, 0.15)" : "rgba(56, 189, 248, 0.15)"
         };
       case 0: // VS_MOVING (En movimiento / Maniobra)
         return {
@@ -188,7 +205,7 @@ const TankStateWebSocketForm: FC = () => {
         };
       case 4: // VS_RECIRC (Recirculación parcial)
         return {
-          flowActive: true,
+          flowActive: isBombaConFlujo,
           label: "RECIRCULANDO",
           color: "#00e5ff",
           bg: "rgba(0, 229, 255, 0.15)"
@@ -276,13 +293,13 @@ const TankStateWebSocketForm: FC = () => {
 
             {/* ESTADO BOMBA DE LLENADO */}
             <Chip
-              icon={isBombaOnline ? <ShieldCheck size={14} color="#39ff14" /> : <AlertTriangle size={14} color="#ff3131" />}
-              label={isBombaOnline ? (isBombaRunning ? "BOMBA: MARCHA" : "BOMBA: ONLINE") : "BOMBA: OFFLINE"}
+              icon={isBombaOnline ? (isBombaConFlujo ? <ShieldCheck size={14} color="#39ff14" /> : (isBombaFail ? <AlertTriangle size={14} color="#ff3131" /> : <ShieldCheck size={14} color="#38bdf8" />)) : <AlertTriangle size={14} color="#ff3131" />}
+              label={isBombaOnline ? (isBombaConFlujo ? "BOMBA: CON FLUJO" : (isBombaFail ? "BOMBA: FALLA AGUA" : (isBombaRunning ? "BOMBA: ARRANCANDO" : "BOMBA: ONLINE"))) : "BOMBA: OFFLINE"}
               size="small"
               sx={{
-                bgcolor: isBombaOnline ? (isBombaRunning ? 'rgba(57, 255, 20, 0.15)' : 'rgba(56, 189, 248, 0.15)') : 'rgba(255, 49, 49, 0.15)',
-                color: isBombaOnline ? (isBombaRunning ? '#39ff14' : '#38bdf8') : '#ff3131',
-                border: `1px solid ${isBombaOnline ? (isBombaRunning ? '#39ff14' : '#38bdf8') : '#ff3131'}`,
+                bgcolor: isBombaOnline ? (isBombaConFlujo ? 'rgba(57, 255, 20, 0.15)' : (isBombaFail ? 'rgba(255, 49, 49, 0.15)' : 'rgba(56, 189, 248, 0.15)')) : 'rgba(255, 49, 49, 0.15)',
+                color: isBombaOnline ? (isBombaConFlujo ? '#39ff14' : (isBombaFail ? '#ff3131' : '#38bdf8')) : '#ff3131',
+                border: `1px solid ${isBombaOnline ? (isBombaConFlujo ? '#39ff14' : (isBombaFail ? '#ff3131' : '#38bdf8')) : '#ff3131'}`,
                 fontWeight: 700,
                 fontSize: '0.75rem',
                 fontFamily: 'monospace'
@@ -398,15 +415,15 @@ const TankStateWebSocketForm: FC = () => {
                 />
                 <PumpIndicator 
                   label="BOMBA LLENADO" 
-                  state={isBombaEnMarcha ? 'running' : 'stopped'} 
+                  state={isBombaConFlujo ? 'running' : 'stopped'} 
                 />
               </Box>
               <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
                 <Typography variant="caption" sx={{ color: currentVsState.state === 'open' ? (isDark ? '#39ff14' : '#64748b') : currentVsState.color, fontFamily: 'monospace', fontWeight: 'bold' }}>
                   MV01: {currentVsState.desc.toUpperCase()} ({data.time_vsoper}s)
                 </Typography>
-                <Typography variant="caption" sx={{ color: isBombaEnMarcha ? (isDark ? '#39ff14' : '#64748b') : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131'), fontFamily: 'monospace', fontWeight: 'bold' }}>
-                  BOMBA: {isBombaEnMarcha ? 'MARCHA' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')}
+                <Typography variant="caption" sx={{ color: isBombaConFlujo ? (isDark ? '#39ff14' : '#64748b') : (isBombaFail ? '#ff3131' : (isBombaOnline ? (isDark ? '#94a3b8' : '#64748b') : '#ff3131')), fontFamily: 'monospace', fontWeight: 'bold' }}>
+                  BOMBA: {isBombaConFlujo ? 'CON FLUJO' : (isBombaFail ? 'FALLA AGUA' : (isBombaRunning ? 'ARRANCANDO' : (isBombaOnline ? 'DETENIDA' : 'OFFLINE')))}
                 </Typography>
               </Box>
             </Box>

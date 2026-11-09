@@ -545,25 +545,22 @@ void IOMonitor(boolean forceUpdate) {
   // ----------------------------------------------------------------------------------------
   bool isFillingActive = digitalRead(tankStateService._pinSOV1);
   if (isFillingActive) {
-    // Condición de flujo de agua confirmado desde la Bomba de Llenado:
-    bool isFlowStable = isPumpOnline && isPumpRunning && !isPumpFail;
+    // La protección contra falta de agua SOLO debe activarse si la bomba de llenado está
+    // en línea y reporta FALLA DE AGUA activa (isPumpFail == true).
+    // Si se llena de la red pública con la bomba apagada (gravedad/presión de calle),
+    // o si la bomba está en marcha con flujo estable (!isPumpFail), la protección NO cierra SOV1.
+    bool pumpWaterFailure = isPumpOnline && isPumpFail;
 
-    if (isFlowStable) {
-      // Si se detecta flujo estable en la bomba, la protección se inhibe
-      // completamente:
-      waterFailTicks = 0;
-    } else {
-      // Si la bomba no tiene flujo estable (falla de agua, apagada u offline
-      // mientras SOV1 está abierta):
+    if (pumpWaterFailure) {
       waterFailTicks++;
       uint32_t maxWaterFailTicks =
           (uint32_t)tankSettingsService.readWaterFailTime() *
           10; // Ticks de 100ms
 
-      // Alarma previa por serial periódica cada 5 segundos:
+      // Alarma periódica por serial cada 5 segundos:
       if (waterFailTicks % 50 == 0) {
         Serial.printf(
-            "[ALARMA] Falta de flujo detectada durante llenado (%u/%u s)...\n",
+            "[ALARMA] Bomba en falla de agua durante llenado (%u/%u s)...\n",
             waterFailTicks / 10, tankSettingsService.readWaterFailTime());
       }
 
@@ -589,6 +586,9 @@ void IOMonitor(boolean forceUpdate) {
             "water_fail_protection");
         waterFailTicks = 0;
       }
+    } else {
+      // Flujo normal o llenado pasivo sin falla: inhibición activa, no se cierra la válvula:
+      waterFailTicks = 0;
     }
 
     // Watchdog general de seguridad absoluta de llenado continuo (40 min máx
@@ -656,8 +656,11 @@ void IOMonitor(boolean forceUpdate) {
             state.Level = distCalc;
             state.levelstate = levelState; // Estado consolidado de sensores
                                            // discretos de nivel de agua.
-            state.vsState =
-                vslsState; // Estado de posicionamiento de valvula motorizada.
+            uint8_t effectiveVsState = vslsState;
+            if (vslsState == VS_MOVING && !vsmotorOn && (recircIndex > 0 || state.tkstate == TS_REC_25 || state.tkstate == TS_REC_50)) {
+              effectiveVsState = VS_RECIRC; // 4: Apertura parcial fija de recirculación
+            }
+            state.vsState = effectiveVsState;
             state.cmdrieg =
                 lastCmdRieg;          // Finalizar riego cuando toque hacerlo..
             state.time_rem = TimeSeg; // Actualizar tiempos en segundos.
