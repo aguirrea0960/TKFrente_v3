@@ -1,10 +1,37 @@
 #include <ESP8266React.h>
 #ifdef ESP32
 #include <nvs_flash.h>
+#include <Preferences.h>
 #endif
 #include <TankMqttSettingsService.h>
 #include <TankSettingsService.h>
 #include <TankStateService.h>
+
+#if defined(ESP32)
+Preferences nvPrefs;
+
+void setNvFillingFlag(bool active) {
+  if (nvPrefs.begin("tk_nv", false)) {
+    if (nvPrefs.getBool("filling", false) != active) {
+      nvPrefs.putBool("filling", active);
+      Serial.printf("[NV] Estado de llenado persistente actualizado: %s\n", active ? "ACTIVO" : "INACTIVO");
+    }
+    nvPrefs.end();
+  }
+}
+
+bool getNvFillingFlag() {
+  bool val = false;
+  if (nvPrefs.begin("tk_nv", true)) {
+    val = nvPrefs.getBool("filling", false);
+    nvPrefs.end();
+  }
+  return val;
+}
+#else
+void setNvFillingFlag(bool active) {}
+bool getNvFillingFlag() { return false; }
+#endif
 
 // SoftwareSerial is only needed on ESP8266
 #ifndef ESP32
@@ -649,6 +676,9 @@ void IOMonitor(boolean forceUpdate) {
             return StateUpdateResult::UNCHANGED; // No hay cambios de estado.
           } else {                               // Reportar cambios en estados.
             lastHeartbeatTime = millis();
+            if (state.cmdfill != lastCmdFill) {
+              setNvFillingFlag(state.cmdfill);
+            }
             lastCmdFill = state.cmdfill;
             lastSov1On = state.sov1On;
             lastSov2On = state.sov2On;
@@ -927,7 +957,27 @@ void setup() {
 
   // Iniciar WebServer y WebSocket server.
   server.begin();
-  // Arrancar timer de simulacion de nivel de agua %.
+
+  // Comprobar si antes de falla de AC o reinicio el tanque estaba llenándose:
+  bool wasFilling = getNvFillingFlag();
+  if (wasFilling) {
+    // Validar si la boya HLS indica que aún hay espacio (nivel normal / no lleno):
+    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^ tankSettingsService.readHLS_InvFlag();
+    if (isNormalLevel) {
+      Serial.println("[INICIO] Reanudando llenado automáticamente tras corte de AC/Reinicio...");
+      tankStateService.update([&](TankState &state) {
+        state.cmdfill = true;
+        state.sov1On  = true;
+        state.tkstate = TS_FILL;
+        return StateUpdateResult::CHANGED;
+      }, "nv_recovery");
+    } else {
+      Serial.println("[INICIO] Tanque ya alcanzó alto nivel (HLS). Anulando reanudación de llenado.");
+      setNvFillingFlag(false);
+    }
+  }
+
+  // Arrancar timer de muestreo de sensores.
   Timer = millis();
 }
 
