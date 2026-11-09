@@ -137,6 +137,11 @@ bool isPumpFail = false;
 uint32_t lastPumpPollTime = 0;
 const uint32_t PUMP_POLL_INTERVAL_MS = 3000; // Sondeo cada 3 segundos
 
+// Variables para reanudación segura de llenado tras reinicio / corte de AC:
+bool pendingNvFillRecovery = false;
+uint32_t nvRecoveryStartTime = 0;
+const uint32_t NV_RECOVERY_TIMEOUT_MS = 20000; // 20s de espera máxima para confirmación de Bomba
+
 // Watchdog de seguridad de llenado continuo (40 minutos en ticks de 100ms):
 uint32_t fillWatchdogTicks = 0;
 const uint32_t FILL_MAX_TICKS = 24000; // 40 min * 60 s * 10 ticks/s
@@ -344,6 +349,49 @@ void pollPumpStatus() {
     }
   }
   http.end();
+}
+
+// Validación diferida de reanudación de llenado tras arranque:
+void checkNvFillRecovery() {
+  if (!pendingNvFillRecovery)
+    return;
+
+  // Timeout si no hubo respuesta de la bomba en 20 segundos:
+  if (millis() - nvRecoveryStartTime > NV_RECOVERY_TIMEOUT_MS) {
+    Serial.println("[NV] Timeout (20s) sin confirmación de Bomba tras reinicio. Anulando reanudación de llenado.");
+    pendingNvFillRecovery = false;
+    setNvFillingFlag(false);
+    return;
+  }
+
+  // Esperar a que la bomba haya respondido al menos una vez (enlace activo):
+  if (!isPumpOnline) {
+    return;
+  }
+
+  // Si la bomba está online y confirmada en marcha sin fallas:
+  if (isPumpRunning && !isPumpFail) {
+    bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^ tankSettingsService.readHLS_InvFlag();
+    if (isNormalLevel) {
+      Serial.println("[NV] ¡Bomba confirmada en marcha y operativa! Reanudando llenado tras reinicio...");
+      tankStateService.update([&](TankState &state) {
+        state.cmdfill = true;
+        state.sov1On  = true;
+        state.tkstate = TS_FILL;
+        return StateUpdateResult::CHANGED;
+      }, "nv_pump_confirmed");
+    } else {
+      Serial.println("[NV] Tanque ya alcanzó alto nivel (HLS). Anulando reanudación de llenado.");
+      setNvFillingFlag(false);
+    }
+  } else {
+    // La bomba respondió pero está apagada o con falla activa:
+    Serial.printf("[NV] Bomba respondió inactiva o con falla (running=%d, fail=%d). Anulando reanudación.\n",
+                  isPumpRunning, isPumpFail);
+    setNvFillingFlag(false);
+  }
+
+  pendingNvFillRecovery = false;
 }
 
 // Gestión de arranque de bomba en Lazo Cerrado al servir agua a la casa:
@@ -964,13 +1012,9 @@ void setup() {
     // Validar si la boya HLS indica que aún hay espacio (nivel normal / no lleno):
     bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^ tankSettingsService.readHLS_InvFlag();
     if (isNormalLevel) {
-      Serial.println("[INICIO] Reanudando llenado automáticamente tras corte de AC/Reinicio...");
-      tankStateService.update([&](TankState &state) {
-        state.cmdfill = true;
-        state.sov1On  = true;
-        state.tkstate = TS_FILL;
-        return StateUpdateResult::CHANGED;
-      }, "nv_recovery");
+      Serial.println("[INICIO] Bandera NV de llenado activa detectada. Esperando confirmación de Bomba...");
+      pendingNvFillRecovery = true;
+      nvRecoveryStartTime = millis();
     } else {
       Serial.println("[INICIO] Tanque ya alcanzó alto nivel (HLS). Anulando reanudación de llenado.");
       setNvFillingFlag(false);
@@ -987,6 +1031,9 @@ void loop() {
 
   // Sondeo asíncrono no bloqueante de la bomba de llenado (cada 3 s):
   pollPumpStatus();
+
+  // Validación diferida de reanudación de llenado tras reinicio (esperando a la bomba):
+  checkNvFillRecovery();
 
   // Muestreo de Sensores cada 100mS y se reporta si y solo si hay algun cambio:
   if (millis() - Timer >= 100) {
