@@ -1,24 +1,28 @@
 #include <SystemStatus.h>
 
-SystemStatus::SystemStatus(AsyncWebServer* server, SecurityManager* securityManager) {
-  server->on(SYSTEM_STATUS_SERVICE_PATH,
-             HTTP_GET,
-             securityManager->wrapRequest(std::bind(&SystemStatus::systemStatus, this, std::placeholders::_1),
-                                          AuthenticationPredicates::IS_AUTHENTICATED));
+SystemStatus::SystemStatus(AsyncWebServer *server,
+                           SecurityManager *securityManager) {
+  server->on(
+      SYSTEM_STATUS_SERVICE_PATH, HTTP_GET,
+      securityManager->wrapRequest(
+          std::bind(&SystemStatus::systemStatus, this, std::placeholders::_1),
+          AuthenticationPredicates::IS_AUTHENTICATED));
 }
 
-void SystemStatus::systemStatus(AsyncWebServerRequest* request) {
-  AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_ESP_STATUS_SIZE);
+void SystemStatus::systemStatus(AsyncWebServerRequest *request) {
+  AsyncJsonResponse *response =
+      new AsyncJsonResponse(false, MAX_ESP_STATUS_SIZE);
   JsonObject root = response->getRoot();
 #ifdef ESP32
   root["esp_platform"] = "esp32";
   root["max_alloc_heap"] = ESP.getMaxAllocHeap();
   root["psram_size"] = ESP.getPsramSize();
-  root["free_psram"] = ESP.getFreePsram();  
+  root["free_psram"] = ESP.getFreePsram();
 #elif defined(ESP8266)
   root["esp_platform"] = "esp8266";
-  root["max_alloc_heap"] = ESP.getMaxFreeBlockSize();
-  root["heap_fragmentation"] = ESP.getHeapFragmentation();
+  root["max_alloc_heap"] = ESP.getFreeHeap();
+  root["heap_fragmentation"] = 0;
+  root["reset_reason"] = ESP.getResetReason();
 #endif
   root["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
   root["free_heap"] = ESP.getFreeHeap();
@@ -28,8 +32,9 @@ void SystemStatus::systemStatus(AsyncWebServerRequest* request) {
   root["flash_chip_size"] = ESP.getFlashChipSize();
   root["flash_chip_speed"] = ESP.getFlashChipSpeed();
 
-// TODO - Ideally this class will take an *FS and extract the file system information from there.
-// ESP8266 and ESP32 do not have feature parity in FS.h which currently makes that difficult.
+// TODO - Ideally this class will take an *FS and extract the file system
+// information from there. ESP8266 and ESP32 do not have feature parity in FS.h
+// which currently makes that difficult.
 #ifdef ESP32
   root["fs_total"] = ESPFS.totalBytes();
   root["fs_used"] = ESPFS.usedBytes();

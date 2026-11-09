@@ -1,17 +1,21 @@
+#include <DiagnosticsService.h>
 #include <WiFiSettingsService.h>
 
-WiFiSettingsService::WiFiSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    _httpEndpoint(WiFiSettings::read, WiFiSettings::update, this, server, WIFI_SETTINGS_SERVICE_PATH, securityManager),
-    _fsPersistence(WiFiSettings::read, WiFiSettings::update, this, fs, WIFI_SETTINGS_FILE),
-    _lastConnectionAttempt(0) {
-  addUpdateHandler([&](const String& originId) { reconfigureWiFiConnection(); }, false);
+WiFiSettingsService::WiFiSettingsService(AsyncWebServer *server, FS *fs,
+                                         SecurityManager *securityManager)
+    : _httpEndpoint(WiFiSettings::read, WiFiSettings::update, this, server,
+                    WIFI_SETTINGS_SERVICE_PATH, securityManager),
+      _fsPersistence(WiFiSettings::read, WiFiSettings::update, this, fs,
+                     WIFI_SETTINGS_FILE),
+      _lastConnectionAttempt(0) {
+  addUpdateHandler([&](const String &originId) { reconfigureWiFiConnection(); },
+                   false);
 }
 
 void WiFiSettingsService::begin() {
-  _fsPersistence.readFromFS();
-  reconfigureWiFiConnection();
-  // We want the device to come up in opmode=0 (WIFI_OFF), when erasing the flash this is not the default.
-  // If needed, we save opmode=0 before disabling persistence so the device boots with WiFi disabled in the future.
+  // We want the device to come up in opmode=0 (WIFI_OFF), when erasing the
+  // flash this is not the default. If needed, we save opmode=0 before disabling
+  // persistence so the device boots with WiFi disabled in the future.
   if (WiFi.getMode() != WIFI_OFF) {
     WiFi.mode(WIFI_OFF);
   }
@@ -19,19 +23,24 @@ void WiFiSettingsService::begin() {
   // Disable WiFi config persistance and auto reconnect
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
-  #ifdef ESP32
+#ifdef ESP32
   // Init the wifi driver on ESP32
   WiFi.mode(WIFI_MODE_MAX);
   WiFi.mode(WIFI_MODE_NULL);
-  WiFi.onEvent(
-      std::bind(&WiFiSettingsService::onStationModeDisconnected, this, std::placeholders::_1, std::placeholders::_2),
-      WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-  WiFi.onEvent(std::bind(&WiFiSettingsService::onStationModeStop, this, std::placeholders::_1, std::placeholders::_2),
+  WiFi.onEvent(std::bind(&WiFiSettingsService::onStationModeDisconnected, this,
+                         std::placeholders::_1, std::placeholders::_2),
+               WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.onEvent(std::bind(&WiFiSettingsService::onStationModeStop, this,
+                         std::placeholders::_1, std::placeholders::_2),
                WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_STOP);
 #elif defined(ESP8266)
   _onStationModeDisconnectedHandler = WiFi.onStationModeDisconnected(
-      std::bind(&WiFiSettingsService::onStationModeDisconnected, this, std::placeholders::_1));
+      std::bind(&WiFiSettingsService::onStationModeDisconnected, this,
+                std::placeholders::_1));
 #endif
+
+  _fsPersistence.readFromFS();
+  reconfigureWiFiConnection();
 }
 
 void WiFiSettingsService::reconfigureWiFiConnection() {
@@ -50,7 +59,9 @@ void WiFiSettingsService::reconfigureWiFiConnection() {
 
 void WiFiSettingsService::loop() {
   unsigned long currentMillis = millis();
-  if (!_lastConnectionAttempt || (unsigned long)(currentMillis - _lastConnectionAttempt) >= WIFI_RECONNECTION_DELAY) {
+  if (!_lastConnectionAttempt ||
+      (unsigned long)(currentMillis - _lastConnectionAttempt) >=
+          WIFI_RECONNECTION_DELAY) {
     _lastConnectionAttempt = currentMillis;
     manageSTA();
   }
@@ -63,10 +74,11 @@ void WiFiSettingsService::manageSTA() {
   }
   // Connect or reconnect as required
   if ((WiFi.getMode() & WIFI_STA) == 0) {
-    Serial.println(F("Connecting to WiFi."));
+    DiagnosticsService::log("WiFi: Conectando a %s...", _state.ssid.c_str());
     if (_state.staticIPConfig) {
       // configure for static IP
-      WiFi.config(_state.localIP, _state.gatewayIP, _state.subnetMask, _state.dnsIP1, _state.dnsIP2);
+      WiFi.config(_state.localIP, _state.gatewayIP, _state.subnetMask,
+                  _state.dnsIP1, _state.dnsIP2);
     } else {
       // configure for DHCP
 #ifdef ESP32
@@ -83,17 +95,20 @@ void WiFiSettingsService::manageSTA() {
 }
 
 #ifdef ESP32
-void WiFiSettingsService::onStationModeDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+void WiFiSettingsService::onStationModeDisconnected(WiFiEvent_t event,
+                                                    WiFiEventInfo_t info) {
   WiFi.disconnect(true);
 }
-void WiFiSettingsService::onStationModeStop(WiFiEvent_t event, WiFiEventInfo_t info) {
+void WiFiSettingsService::onStationModeStop(WiFiEvent_t event,
+                                            WiFiEventInfo_t info) {
   if (_stopping) {
     _lastConnectionAttempt = 0;
     _stopping = false;
   }
 }
 #elif defined(ESP8266)
-void WiFiSettingsService::onStationModeDisconnected(const WiFiEventStationModeDisconnected& event) {
+void WiFiSettingsService::onStationModeDisconnected(
+    const WiFiEventStationModeDisconnected &event) {
   WiFi.disconnect(true);
 }
 #endif

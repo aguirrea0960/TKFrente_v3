@@ -1,10 +1,14 @@
 import { AxiosPromise } from 'axios';
 
-import { OTASettings, SystemStatus } from '../types';
+import { DiagnosticsData, OTASettings, SystemStatus } from '../types';
 import { AXIOS, FileUploadConfig, uploadFile } from './endpoints';
 
 export function readSystemStatus(timeout?: number): AxiosPromise<SystemStatus> {
   return AXIOS.get('/systemStatus', { timeout });
+}
+
+export function readDiagnostics(timeout?: number): AxiosPromise<DiagnosticsData> {
+  return AXIOS.get('/diagnostics', { timeout });
 }
 
 export function restart(): AxiosPromise<void> {

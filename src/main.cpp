@@ -7,6 +7,7 @@
 #include <TankMqttSettingsService.h>
 #include <TankSettingsService.h>
 #include <TankStateService.h>
+#include <DiagnosticsService.h>
 
 #if defined(ESP32)
 Preferences nvPrefs;
@@ -15,8 +16,7 @@ void setNvFillingFlag(bool active) {
   if (nvPrefs.begin("tk_nv", false)) {
     if (nvPrefs.getBool("filling", false) != active) {
       nvPrefs.putBool("filling", active);
-      Serial.printf("[NV] Estado de llenado persistente actualizado: %s\n",
-                    active ? "ACTIVO" : "INACTIVO");
+      DiagnosticsService::log("NV: Llenado %s", active ? "ACTIVO" : "INACTIVO");
     }
     nvPrefs.end();
   }
@@ -80,6 +80,8 @@ TankStateService tankStateService =
 
 TankSettingsService tankSettingsService = TankSettingsService(
     &server, esp8266React.getFS(), esp8266React.getSecurityManager());
+
+DiagnosticsService diagnosticsService(&server);
 
 #if defined(ESP32)
 #define sensor Serial1 // Usar puerto de Hardware.
@@ -276,11 +278,9 @@ void sendPumpReset(bool reset) {
   String payload = reset ? "{\"cmd_reset\":true}" : "{\"cmd_reset\":false}";
   int res = http.POST(payload);
   if (res > 0) {
-    Serial.printf("[SERVICIO] POST cmd_reset %d a la Bomba (%s): %d\n", reset,
-                  host.c_str(), res);
+    DiagnosticsService::log("Bomba: POST reset=%d res=%d", reset, res);
   } else {
-    Serial.printf("[SERVICIO] POST Fallo a la Bomba (%s), error: %s\n",
-                  host.c_str(), http.errorToString(res).c_str());
+    DiagnosticsService::log("Bomba: Fallo POST err=%s", http.errorToString(res).c_str());
   }
   http.end();
 }
@@ -361,8 +361,7 @@ void checkNvFillRecovery() {
 
   // Timeout si no hubo respuesta de la bomba en 20 segundos:
   if (millis() - nvRecoveryStartTime > NV_RECOVERY_TIMEOUT_MS) {
-    Serial.println("[NV] Timeout (20s) sin confirmación de Bomba tras "
-                   "reinicio. Anulando reanudación de llenado.");
+    DiagnosticsService::log("NV: Timeout 20s confirmacion bomba");
     pendingNvFillRecovery = false;
     setNvFillingFlag(false);
     return;
@@ -378,8 +377,7 @@ void checkNvFillRecovery() {
     bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^
                          tankSettingsService.readHLS_InvFlag();
     if (isNormalLevel) {
-      Serial.println("[NV] ¡Bomba confirmada en marcha y operativa! Reanudando "
-                     "llenado tras reinicio...");
+      DiagnosticsService::log("NV: Bomba confirmada OK, reanudando llenado");
       tankStateService.update(
           [&](TankState &state) {
             state.cmdfill = true;
@@ -389,15 +387,12 @@ void checkNvFillRecovery() {
           },
           "nv_pump_confirmed");
     } else {
-      Serial.println("[NV] Tanque ya alcanzó alto nivel (HLS). Anulando "
-                     "reanudación de llenado.");
+      DiagnosticsService::log("NV: Tanque lleno (HLS), anular reanudacion");
       setNvFillingFlag(false);
     }
   } else {
     // La bomba respondió pero está apagada o con falla activa:
-    Serial.printf("[NV] Bomba respondió inactiva o con falla (running=%d, "
-                  "fail=%d). Anulando reanudación.\n",
-                  isPumpRunning, isPumpFail);
+    DiagnosticsService::log("NV: Bomba inactiva/falla (r=%d, f=%d)", isPumpRunning, isPumpFail);
     setNvFillingFlag(false);
   }
 
@@ -421,8 +416,7 @@ void checkAndStartPumpOnService() {
   // manual de MV01
   bool allowManualMv01 = tankSettingsService.readManualMv01();
   if (!isPumpOnline && !allowManualMv01) {
-    Serial.println("[SERVICIO] Bomba OFFLINE y modo manual no permitido. "
-                   "Abortando solicitud de servicio sin mover MV01.");
+    DiagnosticsService::log("SRV: Bomba offline y manual no permitido");
     tankStateService.update(
         [&](TankState &state) {
           state.cmdsrv = false;
@@ -438,7 +432,7 @@ void checkAndStartPumpOnService() {
 
   switch (servicePumpStep) {
   case SP_IDLE:
-    Serial.println("[SERVICIO] Iniciando servicio: Abriendo MV01...");
+    DiagnosticsService::log("SRV: Iniciando, abriendo MV01");
     servicePumpStep = SP_WAIT_VALVE_OPEN;
     break;
 
@@ -446,13 +440,11 @@ void checkAndStartPumpOnService() {
     // Esperar que MV01 esté 100% abierta por fin de carrera
     if (vslsState == VS_OPEN) {
       if (!isPumpOnline) {
-        Serial.println("[SERVICIO] MV01 100% abierta en modo manual. Permanece "
-                       "ABIERTA para pruebas/gravedad (bomba offline).");
+        DiagnosticsService::log("SRV: MV01 abierta modo manual");
         servicePumpStep = SP_RUNNING;
         break;
       }
-      Serial.println("[SERVICIO] MV01 100% abierta. Esperando 2 seg de reposo "
-                     "para inundar succión...");
+      DiagnosticsService::log("SRV: MV01 abierta, reposo 2s");
       serviceTimer = 20; // 2.0 s (20 ticks de 100ms)
       servicePumpStep = SP_STABILIZING;
     }
@@ -463,8 +455,7 @@ void checkAndStartPumpOnService() {
       serviceTimer--;
     }
     if (serviceTimer == 0) {
-      Serial.println("[SERVICIO] Succión inundada. Enviando pulso de arranque "
-                     "(RESET ON)...");
+      DiagnosticsService::log("SRV: Pulso arranque (RESET ON)");
       sendPumpReset(true);
       resetPulseTimer = 20; // 2.0 s
       servicePumpStep = SP_PULSING_RESET;
@@ -477,8 +468,7 @@ void checkAndStartPumpOnService() {
     }
     if (resetPulseTimer == 0) {
       sendPumpReset(false);
-      Serial.println("[SERVICIO] Pulso finalizado (RESET OFF). Supervisando "
-                     "marcha (hasta 30 seg)...");
+      DiagnosticsService::log("SRV: Pulso finalizado (RESET OFF)");
       serviceTimer = 300; // 30.0 seg (300 ticks de 100ms)
       servicePumpStep = SP_VERIFYING_RUN;
     }
@@ -491,7 +481,7 @@ void checkAndStartPumpOnService() {
 
     // Si la bomba confirma marcha (state == 1)
     if (isPumpRunning) {
-      Serial.println("[SERVICIO] Bomba en marcha confirmada.");
+      DiagnosticsService::log("SRV: Bomba en marcha confirmada");
       servicePumpStep = SP_RUNNING;
       break;
     }
@@ -499,8 +489,7 @@ void checkAndStartPumpOnService() {
     // Si vence el tiempo o la bomba no arranca, mantenemos MV01 abierta para
     // suministro por gravedad/booster
     if (serviceTimer == 0 || !isPumpOnline) {
-      Serial.println("[SERVICIO] Tiempo de sincronización finalizado. MV01 "
-                     "permanece ABIERTA para suministro a la casa.");
+      DiagnosticsService::log("SRV: Fin sync, MV01 abierta");
       servicePumpStep = SP_RUNNING;
     }
     break;
@@ -614,10 +603,6 @@ void IOMonitor(boolean forceUpdate) {
           GetOperTimeParams();
         }
       }
-      if (vsOperTime % 10 == 0) {
-        Serial.printf("vsTimeSegFin = %d\r\n", vsTimeSegFin);
-        Serial.printf("motor:%d\r\n", vsmotorOn);
-      }
     }
   }
   // ----------------------------------------------------------------------------------------
@@ -647,15 +632,13 @@ void IOMonitor(boolean forceUpdate) {
 
       // Alarma periódica por serial cada 5 segundos:
       if (waterFailTicks % 50 == 0) {
-        Serial.printf("[ALARMA] Bomba en falla de agua durante llenado "
-                      "ordinario (%u/%u s)...\n",
+        DiagnosticsService::log("ALARMA: Falta agua llenado (%u/%u s)",
                       waterFailTicks / 10,
                       tankSettingsService.readWaterFailTime());
       }
 
       if (waterFailTicks >= maxWaterFailTicks) {
-        Serial.printf("[PROTECCION] Falla de agua confirmada por %u s. "
-                      "Desenergizando SOV1 para proteger el sistema!\n",
+        DiagnosticsService::log("PROTECCION: Falta agua %u s. SOV1 OFF",
                       tankSettingsService.readWaterFailTime());
         tankStateService.update(
             [&](TankState &state) {
@@ -676,8 +659,7 @@ void IOMonitor(boolean forceUpdate) {
     // Watchdog general de seguridad absoluta de llenado continuo (40 min máx
     // para proteger contra fugas):
     if (++fillWatchdogTicks >= FILL_MAX_TICKS) {
-      Serial.println("[WATCHDOG] Llenado continuo superó 40 min. "
-                     "Desenergizando SOV1 por seguridad!");
+      DiagnosticsService::log("WATCHDOG: Llenado 40m excedido. SOV1 OFF");
       tankStateService.update(
           [&](TankState &state) {
             state.cmdfill = false;
@@ -787,7 +769,7 @@ void IOMonitor(boolean forceUpdate) {
         },
         "tank");
   } else
-    Serial.println("Wifi: Desconectado...");
+    DiagnosticsService::log("WiFi: Desconectado...");
 }
 
 // Message reading from sensor using RS232/RS485:
@@ -830,78 +812,6 @@ bool GetSensorData() {
   return false;
 }
 
-/*/ Medición de Nivel ultrasónico utilizando el sensor AJ-SR04M
-void LevelMeasure() {
-  static bool dataOK;
-  uint16_t chksum;
-
-  switch (SenState) {
-    // Enviar comando al sensor:
-    case SS_CMD:
-     // sensor.flush();
-      sensor.write(0x55);
-      SenState++;
-      break;
-
-    // Proceso de lectura en ASCII del valor de distancia:
-    case SS_READ:
-      dataOK = GetSensorData();
-      Serial.printf("LBuff: %02X%02X%02X%02X dataOK:%d\r\n", LBuff[0], LBuff[1],
-LBuff[2], LBuff[3], dataOK); distance = 0; if (!dataOK) { RestTime = 0; SenState
-= SS_REST; } else SenState++; break;
-
-    // Calculo de distancia.
-    case SS_CALC:
-#ifndef BINARY_DATA
-      // Inicio de mensaje correcto?
-      if (dataOK && SensorMsg.startsWith("GAP=")) {
-        // Extraer nivel en milimetros desde el sensor:
-        DisStr = SensorMsg.substring(4, 8);
-        if (DisStr.length() == 4) {
-          distance = DisStr.toInt();  // Leer valor numerico de distancia en mm.
-          distance = distance / 10;   // Convertir en cms.
-        }
-      } else if (SensorMsg == "") {
-        sensorOK = false;
-      }
-#else
-      if (dataOK) {
-        distance = LBuff[1] * 256 + LBuff[2];
-        chksum   = LBuff[0] + LBuff[1] + LBuff[2];
-       // dataOK   = (((chksum & 0xFF) + 1) == LBuff[3]);
-        distance = distance / 10;
-        //  Serial.printf("distance: %d\r\nchecksum: %02X\r\n", distance, chksum
-); SenState++; } else { RestTime = 0; SenState = SS_REST;
-      }
-#endif
-      break;
-
-    // Medición de Nivel:
-    case SS_LEVEL:
-      if ((distance != 0) && dataOK) {  // Data valida?
-
-        // Leer confuración de alturas de tanque:
-        MaxLevel = tankSettingsService.readMax();  // Distancia de nivel máximo.
-        MinLevel = tankSettingsService.readMin();  // Distancia de nivel mínimo.
-
-        // Serial.printf("Max:%d Min:%d\r\n", MaxLevel, MinLevel);
-        // Calcular valor % de nivel de agua del tanque:
-        distCalc = (MinLevel - distance) * 100.0 / (MinLevel - MaxLevel);
-        // Serial.printf("Nivel % =%5.2f\r\n",distCalc);
-        sensor.flush();
-      }
-      RestTime = 0;
-      SenState++;
-      break;
-
-    // Período de descanso:
-    case SS_REST:
-      if (++RestTime == 10)
-        SenState = SS_CMD;
-      break;
-  }
-}*/
-
 // Medición de Nivel ultrasónico utilizando el sensor AJ-SR04M
 void LevelMeasure() {
   static bool dataOK;
@@ -918,13 +828,10 @@ void LevelMeasure() {
   // Proceso de lectura en ASCII del valor de distancia:
   case SS_READ:
     dataOK = GetSensorData();
-    Serial.printf("LBuff: %02X%02X%02X%02X dataOK:%d\r\n", LBuff[0], LBuff[1],
-                  LBuff[2], LBuff[3], dataOK);
     distance = 0;
     if (!dataOK) {
       RestTime = 0;
       SenState = SS_REST;
-      Serial.println("Sensor sin respuesta.. descansando...");
     } else {
       SenState = SS_CALC;
     }
@@ -951,7 +858,6 @@ void LevelMeasure() {
       chksum = LBuff[0] + LBuff[1] + LBuff[2];
       dataOK = ((chksum & 0xFF) == LBuff[3]);
       distance = distance / 10;
-      Serial.printf("distance: %d\r\nchecksum: %02X\r\n", distance, chksum);
       SenState = SS_LEVEL;
     } else {
       RestTime = 0;
@@ -990,8 +896,6 @@ void LevelMeasure() {
 }
 
 void setup() {
-  // start serial and filesystem
-  Serial.begin(SERIAL_BAUD_RATE);
 #ifdef ESP32
   esp_err_t nvs_err = nvs_flash_init();
   if (nvs_err == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -1000,8 +904,6 @@ void setup() {
     nvs_flash_init();
   }
 #endif
-  Serial.println("\r\nReact Water Control v1.0");
-  Serial.println("\r\nTank Controller v1.0");
 
   // Inicializar puerto serial de sensor de nivel:
 #if defined(ESP32)
@@ -1011,16 +913,17 @@ void setup() {
 #endif
   sensor.setTimeout(500);
 
-  // Iniciar framework del proyecto ( por ahora, es un DEMO )
+  // Iniciar framework del proyecto
   esp8266React.begin();
 
   // Carga inicial de settings del tanque:
   tankStateService.begin(); // Servicio de Control del Tanque de Agua.
-
   tankSettingsService.begin(); // Iniciar servicio de configuración del tanque.
+  tankMqttSettingsService.begin(); // Iniciar servicio MQTT del tanque. ( Telemetría y Control )
 
-  tankMqttSettingsService
-      .begin(); // Iniciar servicio MQTT del tanque. ( Telemetría y Control )
+  // Iniciar servicio de diagnóstico remoto web:
+  diagnosticsService.begin();
+  DiagnosticsService::log("Boot ESP32 (reason %d)", (int)esp_reset_reason());
 
   // leer tiempo de operacion 100% abierto o cerrado en segundos.
   vsTimeSegFin = tankSettingsService.readVSOperTime();
@@ -1028,15 +931,11 @@ void setup() {
   // Manejador de cambios de estado del Sistema:
   update_handler_id_t myUpdateHandler =
       tankStateService.addUpdateHandler([&](const String &originId) {
-        Serial.print("Los estados fueron actualizados por: ");
-        Serial.println(originId);
         // Si se ha cambiado algo desde la web....
         if (originId.startsWith("websocket")) {
           recircIndex = tankStateService.readRecIndex();
-          // Leer estado actual del motor:
           vsmotorOn = digitalRead(tankStateService._pinMV01_ON);
-          Serial.printf("recIndex:%d\r\n", recircIndex);
-          Serial.printf("motor:%d\r\n", vsmotorOn);
+          DiagnosticsService::log("WS: rec=%d mot=%d", recircIndex, vsmotorOn);
           GetOperTimeParams();
         }
       });
@@ -1047,18 +946,14 @@ void setup() {
   // Comprobar si antes de falla de AC o reinicio el tanque estaba llenándose:
   bool wasFilling = getNvFillingFlag();
   if (wasFilling) {
-    // Validar si la boya HLS indica que aún hay espacio (nivel normal / no
-    // lleno):
     bool isNormalLevel = digitalRead(tankStateService._pinHLS) ^
                          tankSettingsService.readHLS_InvFlag();
     if (isNormalLevel) {
-      Serial.println("[INICIO] Bandera NV de llenado activa detectada. "
-                     "Esperando confirmación de Bomba...");
+      DiagnosticsService::log("INICIO: Bandera NV activa, esperando Bomba...");
       pendingNvFillRecovery = true;
       nvRecoveryStartTime = millis();
     } else {
-      Serial.println("[INICIO] Tanque ya alcanzó alto nivel (HLS). Anulando "
-                     "reanudación de llenado.");
+      DiagnosticsService::log("INICIO: Tanque lleno (HLS), anular reanudacion");
       setNvFillingFlag(false);
     }
   }
@@ -1085,10 +980,6 @@ void loop() {
     if (++count == 5) {
       LevelMeasure();
       count = 0;
-      if (dataUpdated) {
-        Serial.printf("levelState: %d\r\n", levelState);
-        Serial.printf("vsState   : %d\r\n", vslsState);
-      }
     }
   }
 }

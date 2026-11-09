@@ -35,3 +35,25 @@ export interface OTASettings {
   port: number;
   password: string;
 }
+
+export interface DiagLogItem {
+  t: number;
+  msg: string;
+}
+
+export interface DiagnosticsData {
+  uptime: number;
+  reset_reason: string;
+  reset_code: number;
+  exccause?: number;
+  epc1?: string;
+  excvaddr?: string;
+  free_heap: number;
+  max_free_block: number;
+  heap_fragmentation: number;
+  cpu_freq: number;
+  wifi_connected: boolean;
+  wifi_rssi: number;
+  wifi_ip: string;
+  logs: DiagLogItem[];
+}

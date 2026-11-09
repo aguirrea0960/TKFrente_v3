@@ -1,17 +1,23 @@
+#include <DiagnosticsService.h>
 #include <OTASettingsService.h>
 
-OTASettingsService::OTASettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    _httpEndpoint(OTASettings::read, OTASettings::update, this, server, OTA_SETTINGS_SERVICE_PATH, securityManager),
-    _fsPersistence(OTASettings::read, OTASettings::update, this, fs, OTA_SETTINGS_FILE),
-    _arduinoOTA(nullptr) {
+OTASettingsService::OTASettingsService(AsyncWebServer *server, FS *fs,
+                                       SecurityManager *securityManager)
+    : _httpEndpoint(OTASettings::read, OTASettings::update, this, server,
+                    OTA_SETTINGS_SERVICE_PATH, securityManager),
+      _fsPersistence(OTASettings::read, OTASettings::update, this, fs,
+                     OTA_SETTINGS_FILE),
+      _arduinoOTA(nullptr) {
 #ifdef ESP32
-  WiFi.onEvent(std::bind(&OTASettingsService::onStationModeGotIP, this, std::placeholders::_1, std::placeholders::_2),
+  WiFi.onEvent(std::bind(&OTASettingsService::onStationModeGotIP, this,
+                         std::placeholders::_1, std::placeholders::_2),
                WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 #elif defined(ESP8266)
-  _onStationModeGotIPHandler =
-      WiFi.onStationModeGotIP(std::bind(&OTASettingsService::onStationModeGotIP, this, std::placeholders::_1));
+  _onStationModeGotIPHandler = WiFi.onStationModeGotIP(std::bind(
+      &OTASettingsService::onStationModeGotIP, this, std::placeholders::_1));
 #endif
-  addUpdateHandler([&](const String& originId) { configureArduinoOTA(); }, false);
+  addUpdateHandler([&](const String &originId) { configureArduinoOTA(); },
+                   false);
 }
 
 void OTASettingsService::begin() {
@@ -34,44 +40,31 @@ void OTASettingsService::configureArduinoOTA() {
     _arduinoOTA = nullptr;
   }
   if (_state.enabled) {
-  #ifndef ESP8266  
-    Serial.println(F("Starting OTA Update Service..."));
-  #endif  
+    DiagnosticsService::log("OTA: Iniciando servicio...");
     _arduinoOTA = new ArduinoOTAClass;
     _arduinoOTA->setPort(_state.port);
     _arduinoOTA->setPassword(_state.password.c_str());
-    _arduinoOTA->onStart([]() { Serial.println(F("Starting")); });
-    _arduinoOTA->onEnd([]() { Serial.println(F("\r\nEnd")); });
+    _arduinoOTA->onStart(
+        []() { DiagnosticsService::log("OTA: Inicio recepcion"); });
+    _arduinoOTA->onEnd([]() { DiagnosticsService::log("OTA: Fin grabado"); });
     _arduinoOTA->onProgress([](unsigned int progress, unsigned int total) {
- #ifndef ESP8266     
-      Serial.printf_P(PSTR("Progress: %u%%\r\n"), (progress / (total / 100)));
- #endif     
+      // Evitar saturar logs durante progreso OTA
     });
     _arduinoOTA->onError([](ota_error_t error) {
- #ifndef ESP8266     
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR)
-        Serial.println(F("Auth Failed"));
-      else if (error == OTA_BEGIN_ERROR)
-        Serial.println(F("Begin Failed"));
-      else if (error == OTA_CONNECT_ERROR)
-        Serial.println(F("Connect Failed"));
-      else if (error == OTA_RECEIVE_ERROR)
-        Serial.println(F("Receive Failed"));
-      else if (error == OTA_END_ERROR)
-        Serial.println(F("End Failed"));
-#endif        
+      DiagnosticsService::log("OTA: Error[%u]", error);
     });
     _arduinoOTA->begin();
   }
 }
 
 #ifdef ESP32
-void OTASettingsService::onStationModeGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
+void OTASettingsService::onStationModeGotIP(WiFiEvent_t event,
+                                            WiFiEventInfo_t info) {
   configureArduinoOTA();
 }
 #elif defined(ESP8266)
-void OTASettingsService::onStationModeGotIP(const WiFiEventStationModeGotIP& event) {
+void OTASettingsService::onStationModeGotIP(
+    const WiFiEventStationModeGotIP &event) {
   configureArduinoOTA();
 }
 #endif

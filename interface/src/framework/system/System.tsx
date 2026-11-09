@@ -9,7 +9,7 @@ import { FeaturesContext } from '../../contexts/features';
 import UploadFirmwareForm from './UploadFirmwareForm';
 import UploadFSForm from './UploadFSForm';
 import SystemStatusForm from './SystemStatusForm';
-import OTASettingsForm from './OTASettingsForm';
+import DiagnosticsForm from './DiagnosticsForm';
 
 const System: FC = () => {
   useLayoutTitle("Sistema");
@@ -22,9 +22,7 @@ const System: FC = () => {
     <>
       <RouterTabs value={routerTab}>
         <Tab value="status" label="Estado del Sistema" />
-        {features.ota && (
-          <Tab value="ota" label="Configuración OTA" disabled={!me.admin} />
-        )}
+        <Tab value="diagnostics" label="Diagnóstico" />
         {features.upload_firmware && (
           <Tab value="upload" label="Cargar Firmware" disabled={!me.admin} />
         )}
@@ -34,16 +32,7 @@ const System: FC = () => {
       </RouterTabs>
       <Routes>
         <Route path="status" element={<SystemStatusForm />} />
-        {features.ota && (
-          <Route
-            path="ota"
-            element={
-              <RequireAdmin>
-                <OTASettingsForm />
-              </RequireAdmin>
-            }
-          />
-        )}
+        <Route path="diagnostics" element={<DiagnosticsForm />} />
         {features.upload_firmware && (
           <Route
             path="upload"
@@ -68,6 +57,7 @@ const System: FC = () => {
       </Routes>
     </>
   );
+
 };
 
 export default System;

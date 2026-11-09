@@ -1,12 +1,14 @@
 #include <APSettingsService.h>
+#include <DiagnosticsService.h>
 
-APSettingsService::APSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    _httpEndpoint(APSettings::read, APSettings::update, this, server, AP_SETTINGS_SERVICE_PATH, securityManager),
-    _fsPersistence(APSettings::read, APSettings::update, this, fs, AP_SETTINGS_FILE),
-    _dnsServer(nullptr),
-    _lastManaged(0),
-    _reconfigureAp(false) {
-  addUpdateHandler([&](const String& originId) { reconfigureAP(); }, false);
+APSettingsService::APSettingsService(AsyncWebServer *server, FS *fs,
+                                     SecurityManager *securityManager)
+    : _httpEndpoint(APSettings::read, APSettings::update, this, server,
+                    AP_SETTINGS_SERVICE_PATH, securityManager),
+      _fsPersistence(APSettings::read, APSettings::update, this, fs,
+                     AP_SETTINGS_FILE),
+      _dnsServer(nullptr), _lastManaged(0), _reconfigureAp(false) {
+  addUpdateHandler([&](const String &originId) { reconfigureAP(); }, false);
 }
 
 void APSettingsService::begin() {
@@ -32,8 +34,10 @@ void APSettingsService::loop() {
 void APSettingsService::manageAP() {
   WiFiMode_t currentWiFiMode = WiFi.getMode();
   if (_state.provisionMode == AP_MODE_ALWAYS ||
-      (_state.provisionMode == AP_MODE_DISCONNECTED && WiFi.status() != WL_CONNECTED)) {
-    if (_reconfigureAp || currentWiFiMode == WIFI_OFF || currentWiFiMode == WIFI_STA) {
+      (_state.provisionMode == AP_MODE_DISCONNECTED &&
+       WiFi.status() != WL_CONNECTED)) {
+    if (_reconfigureAp || currentWiFiMode == WIFI_OFF ||
+        currentWiFiMode == WIFI_STA) {
       startAP();
     }
   } else if ((currentWiFiMode == WIFI_AP || currentWiFiMode == WIFI_AP_STA) &&
@@ -44,17 +48,14 @@ void APSettingsService::manageAP() {
 }
 
 void APSettingsService::startAP() {
-#ifndef ESP8266  
-  Serial.println(F("Starting software access point"));
-#endif  
+  DiagnosticsService::log("AP: Iniciando SoftAP");
   WiFi.softAPConfig(_state.localIP, _state.gatewayIP, _state.subnetMask);
-  WiFi.softAP(_state.ssid.c_str(), _state.password.c_str(), _state.channel, _state.ssidHidden, _state.maxClients);
+  WiFi.softAP(_state.ssid.c_str(), _state.password.c_str(), _state.channel,
+              _state.ssidHidden, _state.maxClients);
   if (!_dnsServer) {
     IPAddress apIp = WiFi.softAPIP();
-#ifndef ESP8266    
-    Serial.print(F("Starting captive portal on "));
-    Serial.println(apIp);
-#endif    
+    DiagnosticsService::log("AP: Portal cautivo en %s",
+                            apIp.toString().c_str());
     _dnsServer = new DNSServer;
     _dnsServer->start(DNS_PORT, "*", apIp);
   }
@@ -62,16 +63,12 @@ void APSettingsService::startAP() {
 
 void APSettingsService::stopAP() {
   if (_dnsServer) {
-#ifndef ESP8266    
-    Serial.println(F("Stopping captive portal"));
-#endif    
+    DiagnosticsService::log("AP: Deteniendo portal cautivo");
     _dnsServer->stop();
     delete _dnsServer;
     _dnsServer = nullptr;
   }
-#ifndef ESP8266  
-  Serial.println(F("Stopping software access point"));
-#endif  
+  DiagnosticsService::log("AP: Deteniendo SoftAP");
   WiFi.softAPdisconnect(true);
 }
 
@@ -84,7 +81,8 @@ void APSettingsService::handleDNS() {
 APNetworkStatus APSettingsService::getAPNetworkStatus() {
   WiFiMode_t currentWiFiMode = WiFi.getMode();
   bool apActive = currentWiFiMode == WIFI_AP || currentWiFiMode == WIFI_AP_STA;
-  if (apActive && _state.provisionMode != AP_MODE_ALWAYS && WiFi.status() == WL_CONNECTED) {
+  if (apActive && _state.provisionMode != AP_MODE_ALWAYS &&
+      WiFi.status() == WL_CONNECTED) {
     return APNetworkStatus::LINGERING;
   }
   return apActive ? APNetworkStatus::ACTIVE : APNetworkStatus::INACTIVE;
