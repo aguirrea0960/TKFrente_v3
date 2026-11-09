@@ -138,3 +138,27 @@ pio run -e envESP32_C3L-WiFi -t buildfs
 3. **Optimización de Interfaz HMI (Supresión de Advertencia)**:
    - En `TankStateWebSocketForm`, al solicitar inicio de llenado (`cmd_fill`), si la bomba se encuentra en marcha activa (`data.pump_running && !data.pump_fail`), se omite automáticamente el diálogo modal de confirmación, permitiendo el arranque instantáneo en un solo paso.
 
+---
+
+## 7. Persistencia NV, Protección de Recirculación y Optimización MQTT (Noviembre 2026)
+
+1. **Reanudación Segura de Llenado tras Corte AC o Reinicio (NVS Preferences)**:
+   - Persistencia del estado `cmdfill` en el namespace `tk_nv`, clave `filling`.
+   - En el arranque (`setup()`), no se abre la válvula a ciegas: se inicia una ventana de sincronización de 20 segundos (`pendingNvFillRecovery`).
+   - Solo cuando el enlace con la Bomba de Llenado (`192.168.10.193`) responde confirmando marcha activa sin fallas (`isPumpRunning && !isPumpFail`) y el sensor `HLS` no está en tope, se reanuda automáticamente el llenado. Si la bomba está apagada, en fallo o vence el timeout, se anula la maniobra y se apaga la bandera.
+2. **Inmunización Absoluta de la Recirculación (Cebado y Purga)**:
+   - Se añadió `isRecirculating()` en `TankStateService.h`.
+   - Durante las maniobras de recirculación (`TS_REC_25` o `TS_REC_50`), la protección por falla de agua se inhibe totalmente (`!isRecircActive`), permitiendo al usuario purgar aire y cebar la succión sin que el sistema cierre intempestivamente `SOV1` ni `MV01`.
+   - Se habilitó la conmutación directa e instantánea desde `TS_FILL` hacia recirculación sin bloqueos.
+3. **Distribución P&ID en Fila Única Continua y Cajas de Ancho Fijo**:
+   - En `TankStateWebSocketForm.tsx`, los 4 bloques (`Suministro`, `Tanque+HLS`, `Succión Bomba` y `Cabezal de Distribución`) se alinean horizontalmente en una sola fila continua (~860 px requeridos en un contenedor de 1200 px).
+   - Anchos fijos e invariables (`width: 175px`, `320px`, `215px`), evitando cualquier alteración o parpadeo horizontal al variar la longitud de los mensajes de estado.
+4. **Erradicación del Tráfico Repetitivo MQTT (Reporte Estricto por Hardware)**:
+   - Se eliminó el `heartbeatDue` de 1000 ms y los contadores de software (`time_vsoper`, `time_rem`) del evaluador de cambios de estado.
+   - El microcontrolador solo emite eventos MQTT **SI Y SOLO SI** se produce un cambio físico real en el hardware (contactores, boyas, relés, nivel o bombas). Si no hay cambios, el estado permanece en `UNCHANGED` y el tráfico MQTT es nulo, liberando los búferes TCP y eliminando la latencia en las peticiones HTTP.
+5. **Configuración de Fábrica Unificada**:
+   - **Broker MQTT Remoto**: `165.22.145.161` (puerto `1883`), usuario `admin`.
+   - **Tópico de Tanques**: `water/tank/tk-#{short_id}` y Client ID `tk-#{short_id}`, donde `#{short_id}` extrae los **últimos 2 bytes de la MAC** en hexadecimal (4 caracteres, ej. `3640`).
+   - **Zona Horaria**: `America/Caracas` con formato POSIX `UNK4`, alineado con la definición del frontend (`TZ.tsx`).
+
+
