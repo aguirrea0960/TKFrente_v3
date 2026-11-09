@@ -727,24 +727,29 @@ void IOMonitor(boolean forceUpdate) {
           static bool lastReportedPumpRunning = false;
           static bool lastReportedPumpFail = false;
 
-          // Detección estricta de cambios reales (evita ráfagas y spam continuo de MQTT/WS):
+          // Detección estricta de cambios reales (evita ráfagas y spam continuo
+          // de MQTT/WS):
           bool levelStateChanged = (levelState != lastReportedLevelState);
-          bool analogChanged     = (fabs(distCalc - state.Level) >= 1.0); // Banda muerta de 1.0% para ruido ultrasónico
-          bool vsStateChanged    = (effectiveVsState != lastReportedVsState);
-          bool cmdFillChanged    = (state.cmdfill != lastReportedCmdFill);
-          bool cmdRiegChanged    = (lastCmdRieg != lastReportedCmdRieg);
-          bool valveChanged      = (state.sov1On != lastReportedSov1 ||
-                                    state.sov2On != lastReportedSov2 ||
-                                    vsmotorOn != lastReportedVsMot);
-          bool pumpChanged       = (isPumpOnline != lastReportedPumpOnline ||
-                                    isPumpRunning != lastReportedPumpRunning ||
-                                    isPumpFail != lastReportedPumpFail);
+          bool analogChanged =
+              (fabs(distCalc - state.Level) >=
+               1.0); // Banda muerta de 1.0% para ruido ultrasónico
+          bool vsStateChanged = (effectiveVsState != lastReportedVsState);
+          bool cmdFillChanged = (state.cmdfill != lastReportedCmdFill);
+          bool cmdRiegChanged = (lastCmdRieg != lastReportedCmdRieg);
+          bool valveChanged = (state.sov1On != lastReportedSov1 ||
+                               state.sov2On != lastReportedSov2 ||
+                               vsmotorOn != lastReportedVsMot);
+          bool pumpChanged = (isPumpOnline != lastReportedPumpOnline ||
+                              isPumpRunning != lastReportedPumpRunning ||
+                              isPumpFail != lastReportedPumpFail);
 
-          if (!forceUpdate && !levelStateChanged && !analogChanged && !vsStateChanged &&
-              !cmdFillChanged && !cmdRiegChanged && !valveChanged && !pumpChanged &&
+          if (!forceUpdate && !levelStateChanged && !analogChanged &&
+              !vsStateChanged && !cmdFillChanged && !cmdRiegChanged &&
+              !valveChanged && !pumpChanged &&
               (state.tkstate == lastReportedState)) {
             dataUpdated = false;
-            return StateUpdateResult::UNCHANGED; // Cero paquetes si el hardware no cambia
+            return StateUpdateResult::UNCHANGED; // Cero paquetes si el hardware
+                                                 // no cambia
           }
 
           if (state.cmdfill != lastReportedCmdFill) {
@@ -964,8 +969,10 @@ void LevelMeasure() {
 
       if (MinLevel > MaxLevel) {
         double rawCalc = (MinLevel - distance) * 100.0 / (MinLevel - MaxLevel);
-        if (rawCalc < 0.0) rawCalc = 0.0;
-        if (rawCalc > 100.0) rawCalc = 100.0;
+        if (rawCalc < 0.0)
+          rawCalc = 0.0;
+        if (rawCalc > 100.0)
+          rawCalc = 100.0;
         distCalc = round(rawCalc * 10.0) / 10.0; // Redondear a 1 decimal
       }
     }
