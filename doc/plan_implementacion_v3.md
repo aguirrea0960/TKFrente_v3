@@ -125,3 +125,16 @@ pio run -e envESP32_C3L-WiFi -t buildfs
 3. **Unificación de Temas Light / Dark**:
    - Estados inferiores de `MV01`, `BOMBA` y `LLENANDO TANQUE` mantienen el verde brillante (`#39ff14`) en Dark Mode y conmutan al gris suave (`#64748b`) en Light Mode, logrando coherencia visual con el Cabezal de Distribución.
 
+---
+
+## 6. Protección de Llenado e Inhibición por Flujo Estable (Noviembre 2026)
+
+1. **Inhibición de Protección por Flujo Estable de Bomba**:
+   - Condición de flujo: `isPumpOnline && isPumpRunning && !isPumpFail`.
+   - Cuando la bomba de llenado confirma marcha continua sin falla de agua (PressControl en régimen estable), el temporizador de falla de agua (`waterFailTicks`) se resetea a 0 y la protección se inhibe completamente, garantizando que la electroválvula `SOV1` no se cierre involuntariamente durante el llenado.
+2. **Temporizador Configurable de Detección de Falla de Agua (`water_fail_time`)**:
+   - Se incorporó el parámetro `water_fail_time` (por defecto: 30 segundos) en `TankSettingsService` y en el formulario web `TankSettingsForm`.
+   - Si la válvula de llenado está abierta pero la bomba pierde flujo o entra en falla sostenida por un tiempo superior a `water_fail_time`, la protección desenergiza `SOV1` (y cierra `MV01` si estaba en recirculación), restableciendo el estado a `TS_IDLE`.
+3. **Optimización de Interfaz HMI (Supresión de Advertencia)**:
+   - En `TankStateWebSocketForm`, al solicitar inicio de llenado (`cmd_fill`), si la bomba se encuentra en marcha activa (`data.pump_running && !data.pump_fail`), se omite automáticamente el diálogo modal de confirmación, permitiendo el arranque instantáneo en un solo paso.
+

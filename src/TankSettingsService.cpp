@@ -51,3 +51,7 @@ String TankSettingsService::readPumpHost(){
 bool TankSettingsService::readManualMv01(){
   return TankSettingsService::_state.manual_mv01;
 }
+
+uint16_t TankSettingsService::readWaterFailTime(){
+  return TankSettingsService::_state.water_fail_time > 0 ? TankSettingsService::_state.water_fail_time : FACTORY_WATER_FAIL_TIME;
+}

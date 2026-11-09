@@ -213,24 +213,36 @@ const TankSettingsForm: FC = () => {
 
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
-            {/* SECCIÓN 4: INTEGRACIÓN BOMBA ASOCIADA */}
+            {/* SECCIÓN 4: INTEGRACIÓN BOMBA ASOCIADA Y SEGURIDAD */}
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                 <Server size={18} color="#a855f7" />
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#a855f7' }}>
-                  ENLACE CON BOMBA ASOCIADA (ARRANQUE AUTOMÁTICO EN SERVICIO)
+                  ENLACE CON BOMBA ASOCIADA Y TIEMPO DE FALLA DE AGUA
                 </Typography>
               </Box>
-              <TextField
-                name="pump_host"
-                label="Dirección IP o Host de la Bomba Asociada"
-                fullWidth
-                variant="outlined"
-                value={data.pump_host || ''}
-                type="text"
-                onChange={updateFormValue}
-                helperText="Host objetivo para emitir POST /rest/devState (Por defecto: 192.168.10.191)"
-              />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <TextField
+                  name="pump_host"
+                  label="Dirección IP o Host de la Bomba Asociada"
+                  fullWidth
+                  variant="outlined"
+                  value={data.pump_host || ''}
+                  type="text"
+                  onChange={updateFormValue}
+                  helperText="Host objetivo para emitir POST /rest/devState (Por defecto: 192.168.10.191)"
+                />
+                <TextField
+                  name="water_fail_time"
+                  label="Tiempo Detección Falla de Agua (Segundos)"
+                  fullWidth
+                  variant="outlined"
+                  value={numberValue(data.water_fail_time)}
+                  type="number"
+                  onChange={updateFormValue}
+                  helperText="Tiempo con alarma de falla antes de cerrar la válvula (Por defecto: 30s)"
+                />
+              </Box>
             </Box>
 
           </Box>

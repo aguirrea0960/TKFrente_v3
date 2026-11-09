@@ -33,4 +33,5 @@ export interface TankSettings {
   hls_invert: boolean;
   manual_mv01?: boolean;
   pump_host?: string;
+  water_fail_time?: number;
 }

@@ -113,8 +113,15 @@ const TankStateWebSocketForm: FC = () => {
       // Si ya está llenando, detener inmediatamente sin confirmación
       handleToggle('cmd_fill');
     } else {
-      // Si va a iniciar llenado, abrir modal de confirmación y advertencia
-      setConfirmFillOpen(true);
+      // Si la bomba está en marcha y sin falla de agua (flujo activo), iniciar DIRECTAMENTE sin advertencia:
+      const pumpRunning = data.pump_running ?? false;
+      const pumpFail = data.pump_fail ?? false;
+      if (pumpRunning && !pumpFail) {
+        handleToggle('cmd_fill');
+      } else {
+        // Solo si la bomba está apagada o con falla, mostrar modal de advertencia preventiva:
+        setConfirmFillOpen(true);
+      }
     }
   };
 

@@ -36,6 +36,10 @@
 #define FACTORY_PUMP_HOST "192.168.10.193"
 #endif
 
+#ifndef FACTORY_WATER_FAIL_TIME
+#define FACTORY_WATER_FAIL_TIME 30
+#endif
+
 #define DEFAULT_STATE false
 
 class TankSettings {
@@ -49,6 +53,7 @@ class TankSettings {
   bool    hls_Inverted;    // Bandera de contacto de switch de nivel alto invertido ( Para adaptar posicion del Flotador )
   String  pump_host;       // Direccion IP del Controlador de Bomba Asociado.
   bool    manual_mv01;     // Permitir que se pueda abrir válvula MV01 de forma manual
+  uint16_t water_fail_time; // Tiempo de detección de falla de agua en segundos
     
   static void read(TankSettings& settings, JsonObject& root) {
     root["level_min"] = settings.level_min;
@@ -60,6 +65,7 @@ class TankSettings {
     root["hls_invert"] = settings.hls_Inverted;
     root["pump_host"]  = settings.pump_host;
     root["manual_mv01"] = settings.manual_mv01;
+    root["water_fail_time"] = settings.water_fail_time;
   }
 
   static StateUpdateResult update(JsonObject& root, TankSettings& settings) {
@@ -72,6 +78,7 @@ class TankSettings {
     settings.hls_Inverted = root["hls_invert"] | DEFAULT_STATE;
     settings.pump_host = root["pump_host"] | FACTORY_PUMP_HOST;
     settings.manual_mv01 = root["manual_mv01"] | false;
+    settings.water_fail_time = root["water_fail_time"] | FACTORY_WATER_FAIL_TIME;
     return StateUpdateResult::CHANGED;
   }
   
@@ -90,6 +97,7 @@ class TankSettingsService : public StatefulService<TankSettings> {
    bool    readHLS_InvFlag();
    String  readPumpHost();
    bool    readManualMv01();
+   uint16_t readWaterFailTime();
    
 
  private:
